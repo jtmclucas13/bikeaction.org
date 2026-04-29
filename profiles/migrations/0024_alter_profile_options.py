@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('profiles', '0023_alter_profile_pronouns'),
+        ("profiles", "0023_alter_profile_pronouns"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='profile',
-            options={'permissions': [('can_organize', 'Can Organize')]},
+            name="profile",
+            options={"permissions": [("can_organize", "Can Organize")]},
         ),
     ]
