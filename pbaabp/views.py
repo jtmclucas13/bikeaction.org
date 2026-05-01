@@ -26,6 +26,7 @@ from profiles.tasks import add_mailjet_subscriber, unsubscribe_mailjet_email
 
 
 class EmailLoginView(FormView):
+    # Passwordless email login flow.
     template_name = "email_login.html"
     form_class = EmailLoginForm
 
