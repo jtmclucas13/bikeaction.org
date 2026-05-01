@@ -2,9 +2,9 @@
 FROM node:22-bookworm AS lazer-build
 WORKDIR /code/
 COPY ./lazer_app/projectLazer/package.json ./lazer_app/projectLazer/package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm,sharing=locked npm install
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 COPY ./lazer_app/projectLazer/ ./
-RUN npx ionic build --prod
+RUN npm run ionic:build:before && BUILD_ENV=production npm run build
 
 # ---- Lazer dev (watch mode via docker-compose) ----
 FROM node:22-bookworm AS lazer-dev
@@ -52,7 +52,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --group deploy
 COPY .ssh /root/.ssh
 COPY . /code/
-COPY --from=lazer-build /code/www /code/static/lazer
 RUN \
     DJANGO_SECRET_KEY=deadbeefcafe \
     DATABASE_URL=None \
@@ -60,3 +59,4 @@ RUN \
     RECAPTCHA_PUBLIC_KEY=None \
     DJANGO_SETTINGS_MODULE=pbaabp.settings \
     uv run python manage.py collectstatic --noinput
+COPY --link --from=lazer-build /code/www /code/static/lazer
