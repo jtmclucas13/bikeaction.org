@@ -1,0 +1,73 @@
+Hello {{ first_name }},
+
+<small><i>You are receiving this email because you attended PBA's April District 1 meeting.</i></small>
+
+
+<p>
+  Thank you for coming to the April District 1 meeting of Philly Bike Action! It was great
+  connecting, sharing updates on bike lane projects across the district, and starting to plan what’s
+  next. Here are some upcoming ways to stay involved:
+</p>
+
+<h3>Volunteer Opportunities</h3>
+<ul>
+  <li>
+    <strong>11th St. Bike Lane Clean-up.</strong> Drop in for as long as you can; we’ll have brooms, rakes,
+    and supplies.
+    <em>May 17th | 10am - 1pm | 11th &amp; Washington</em>
+  </li> <br>
+
+  <li>
+    <strong>Pine St Bike Lane Pop Up.</strong> Pass out fliers and talk to folks about protected bike lanes.
+    <a href="https://forms.gle/Qx6aoet8kYkYNN786">Sign up to volunteer</a>.
+    <em>May 24th | 10am - 11am | 300 block of Pine St.</em>
+  </li> <br>
+
+  <li>
+    <strong>Pride on Passyunk.</strong> Join us at the table with fellow PBA folks. A fun, easy way to get
+    involved—no experience needed. <a href="https://docs.google.com/forms/d/e/1FAIpQLSfBqYSUFujS6gX2p9cPh9gjsQjFztsIjFrGTlbUGhurQCDM1A/viewform?usp=sharing&ouid=115911406669123255340">Sign up to volunteer</a>.
+    <em>June 14th | 1 - 5pm | E Passyunk Ave</em>
+  </li>
+</ul>
+
+<h3>Upcoming Events</h3>
+<ul>
+  <li>
+    <strong>War on Cars Podcast in Philly.</strong> <a href="https://5thsq.app.neoncrm.com/nx/portal/neonevents/events?path=%2Fportal%2Fevents%2F37284">Paid ticket required.</a><br />
+    <em>May 14 | 7pm | Resurrection Church (17th and Samson)</em>
+  </li> <br>
+
+  <li>
+    <strong>May District 1 Meeting.</strong> Get updates on projects, learn how to get involved in your
+    neighborhood.<br />
+    <em>May 18th | 7pm - 9 pm | Old Pine Community Center and Tattooed Mom</em>
+  </li> <br>
+
+  <li>
+    <strong>Ride of Silence.</strong> Powerful ride in remembrance of those injured or killed while riding
+    their bike in the Philadelphia region.<br />
+    <em>May 20 | City Hall | 6:45pm</em>
+  </li>
+</ul>
+
+<h3>Resources</h3>
+<ul>
+  <li>
+    <a href="https://www.5thsq.org/2026_election_center">5th Square’s Election information</a>, including candidate questionnaires and
+    recommendations for committee people. Election Day is May 19th, Registration deadline
+    is May 4th.
+  </li>
+</ul>
+
+<p>
+  Want to stay up to date and plug in more regularly? <a href="https://bikeaction.org/get-involved/">Create a PBA account</a> to get alerts about
+  actions in your neighborhood, and join <a href="https://discord.gg/FNYfjzjWnB">our Discord</a> to connect with other members and jump into
+  ongoing projects.
+</p>
+
+<p>We look forward to seeing you at our next event!</p>
+
+<p>
+  <strong> Philly Bike Action </strong> <br />
+  District 1
+</p>
