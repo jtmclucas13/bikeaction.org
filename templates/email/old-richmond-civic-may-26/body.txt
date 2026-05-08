@@ -1,0 +1,15 @@
+Dear {{ first_name }},
+
+<small><i>You are receiving this email from [Philly Bike Action](https://bikeaction.org/) because you have a PBA account and live near the proposed safety improvements.</i></small>
+
+Your neighborhood association, [**Olde Richmond Civic Association**,](https://www.olderichmondphilly.org/) is holding a general meeting on **May 26 from 7:30-8:30 PM** at **Cione Recreation Center (2600 Aramingo Ave)**.
+
+At this meeting, the Office of Transportation and Infrastructure Systems (OTIS) will present proposed safety improvements for **Lehigh and Aramingo Avenue** following the [recent crash](https://www.cbsnews.com/philadelphia/news/glenn-colville-cyclist-hit-and-run-vigil/) that killed cyclist Glenn Colville.
+
+**We're asking you to show up and speak in support of immediate, meaningful safety improvements.**
+
+This is a key opportunity to make it clear that our community expects safer conditions on Aramingo - now, not later.
+
+We hope to see you there.
+
+**Philly Bike Action**
