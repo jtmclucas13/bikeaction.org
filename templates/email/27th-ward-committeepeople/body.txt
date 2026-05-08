@@ -1,0 +1,53 @@
+<small><i>You are receiving this email because you have a PBA Account and live within the {{ division_label }} Division of the 27th Ward.</i></small>
+
+Hi {{ first_name }},
+
+{% if variant == "vacancy" %}
+<b>TL;DR: If you're a registered Democrat and interested in running for Committeeperson, there's a key vacancy in your area!</b>
+{% elif variant == "write_in" %}
+<b>TL;DR: If you're a registered Democrat, PBA recommends you <u>write-in</u> pro-bike champion <u>{{ candidate_names }}</u> for Committeeperson on or before May 19!</b>
+{% else %}
+<b>TL;DR: If you're a registered Democrat, PBA recommends you vote for pro-bike {{ champion_label }} <u>{{ candidate_names }}</u> for Committeeperson on or before May 19!</b>
+{% endif %}
+
+Wards are the basic building blocks of the Philadelphia Democratic Party, so politicians take them extremely seriously. Letters of support from Wards and Ward Leaders are a key way City Council determines "community support" for initiatives like new and protected bike lanes; in at least one case, a friendly Ward Leader has already helped us secure decisive political support for a new bike lane.
+
+{% if variant == "opposition" %}
+Incumbent Committeepeople in this area have been instrumental in opposing crucial safety projects like 47th Street. It's critical that we elect pro-safety champions instead.
+
+Philly Bike Action encourages you to vote for the following <b>PBA-endorsed</b>, pro-bike candidates:
+
+{% for candidate in candidates %}
+* <b><u>{{ candidate.name }}</u></b>{% if candidate.note %} {{ candidate.note }}{% endif %}
+{% endfor %}
+{% elif variant == "vacancy" %}
+Your Ward's leader has announced her retirement, and a PBA member--Ben Moss-Horwitz--is running to replace her. No candidates filed to run for Committeeperson in your Division, giving us a critical opportunity to elect pro-bike Committeepeople who can help Ben win as Ward Leader. Winning as a write-in requires only ten votes(!)
+{% elif variant == "write_in" %}
+Only <b>one candidate</b> filed to run for your Division's two seats, giving us a critical opportunity to elect a pro-bike Committeeperson; winning as a write-in requires only ten votes(!)
+
+Philly Bike Action encourages you to <b>write in</b> the following pro-bike candidate:
+
+{% for candidate in candidates %}
+* <b><u>{{ candidate.name }}</u></b>{% if candidate.note %} {{ candidate.note }}{% endif %}
+{% endfor %}
+{% else %}
+It's critical that residents elect bike-friendly Committeepeople to these seats who will vote for pro-bike Ward Leaders and support bike safety upgrades like 47th Street.
+
+Philly Bike Action encourages you to vote for the following <b>PBA-endorsed</b>, pro-bike {{ candidate_word }}:
+
+{% for candidate in candidates %}
+* <b><u>{{ candidate.name }}</u></b>{% if candidate.note %} {{ candidate.note }}{% endif %}
+{% endfor %}
+{% endif %}
+
+Only registered Democrats can {% if variant == "vacancy" and can_run %}run/{% endif %}vote in the primary.
+
+{% if variant == "vacancy" %}
+If you're interested in running for Committeeperson, please contact PBA Organizer Gabriel Straus at (917)-923-6167 as soon as possible; we're still looking to recruit one more candidate.
+{% else %}
+If you're interested in volunteering before the election (passing out flyers, canvassing your neighbors), please text PBA Organizer Gabriel Straus at (917)-923-6167.
+{% endif %}
+
+Thanks for your continued support for protected bike infrastructure for Philadelphia!
+
+**Philly Bike Action**
