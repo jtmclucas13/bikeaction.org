@@ -513,16 +513,16 @@ We are excited to have you involved. More details are below.`;
     const valueSelect = row.querySelector('[data-target-value]');
     const removeButton = row.querySelector('[data-remove-target]');
 
-    function updateRow() {
+    function updateRow(selectedValue) {
       const targetType = typeSelect.value;
       row.dataset.targetKind = targetType;
-      valueSelect.innerHTML = targetValueOptions(targetType, row.dataset.selectedTarget || valueSelect.value);
+      valueSelect.innerHTML = targetValueOptions(targetType, selectedValue || '');
       row.dataset.selectedTarget = '';
     }
 
     typeSelect.addEventListener('change', function() {
       row.dataset.selectedTarget = '';
-      updateRow();
+      updateRow('');
     });
     valueSelect.addEventListener('change', function() {
       row.dataset.selectedTarget = valueSelect.value;
@@ -534,7 +534,7 @@ We are excited to have you involved. More details are below.`;
         htmx.trigger('#email-draft-form', 'change');
       });
     }
-    updateRow();
+    updateRow(row.dataset.selectedTarget);
   }
 
   function renumberTargetRows() {
