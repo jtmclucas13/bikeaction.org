@@ -1,0 +1,708 @@
+{% extends 'base.html' %}
+{% load i18n leaflet_tags %}
+{% block title %}Email Draft{% endblock %}
+{% block extra_head %}
+{% leaflet_js %}
+{% leaflet_css %}
+<style>
+  .email-draft-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+    gap: 1.5rem;
+    margin: 1rem;
+    align-items: start;
+  }
+
+  .email-draft-page-link {
+    display: inline-block;
+    margin: 1rem 1rem 0;
+  }
+
+  .email-draft-panel {
+    min-width: 0;
+  }
+
+  .email-draft-form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .email-draft-form-readonly select,
+  .email-draft-form-readonly [data-target-row] {
+    pointer-events: none;
+  }
+
+  .email-draft-form p {
+    margin: 0;
+    text-align: left;
+  }
+
+  .email-draft-form label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: 700;
+  }
+
+  .email-draft-form input,
+  .email-draft-form select,
+  .email-draft-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .email-draft-form select {
+    zoom: 1;
+    min-height: 2.35rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .email-draft-form input[type="checkbox"] {
+    width: auto;
+  }
+
+  .email-draft-button {
+    appearance: none;
+    border: 0;
+    border-radius: 6px;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+    min-height: 2.4rem;
+    min-width: 0;
+    padding: 0.55rem 0.9rem;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .email-draft-button:hover {
+    filter: brightness(0.96);
+  }
+
+  .email-draft-button-primary {
+    background-color: rgb(131, 189, 86);
+  }
+
+  .email-draft-button-secondary {
+    background-color: #666;
+  }
+
+  .email-draft-button-muted {
+    background-color: #888;
+  }
+
+  .email-draft-button-small {
+    min-height: 2rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.95rem;
+  }
+
+  .email-draft-icon-button {
+    width: 2.1rem;
+    min-width: 2.1rem;
+    min-height: 2.1rem;
+    padding: 0;
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .email-draft-targets {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 1rem;
+    background-color: #fff;
+  }
+
+  .email-draft-targets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .email-draft-target-row {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.75fr) minmax(14rem, 1.25fr) auto;
+    gap: 0.6rem;
+    align-items: start;
+    padding: 0.8rem 0 0;
+    border-top: 1px solid #e3e3e3;
+  }
+
+  .email-draft-target-row:first-of-type {
+    border-top: 0;
+  }
+
+  .email-draft-target-value,
+  .email-draft-target-geojson {
+    display: none;
+  }
+
+  .email-draft-target-row[data-target-kind="district"] .email-draft-target-value,
+  .email-draft-target-row[data-target-kind="rco"] .email-draft-target-value,
+  .email-draft-target-row[data-target-kind="ward"] .email-draft-target-value,
+  .email-draft-target-row[data-target-kind="division"] .email-draft-target-value,
+  .email-draft-target-row[data-target-kind="petition"] .email-draft-target-value,
+  .email-draft-target-row[data-target-kind="event_signin"] .email-draft-target-value {
+    display: block;
+  }
+
+  .email-draft-target-row[data-target-kind="geojson"] .email-draft-target-geojson {
+    display: block;
+  }
+
+  .email-draft-target-row[data-target-kind="geojson"] .email-draft-geojson-help {
+    display: block;
+  }
+
+  .email-draft-target-help {
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    margin: 0.25rem 0 0.5rem;
+    text-align: left;
+  }
+
+  .email-draft-geojson-help {
+    color: #666;
+    display: none;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    margin: 0.35rem 0 0;
+  }
+
+  .email-draft-targets select,
+  .email-draft-targets textarea {
+    font-size: 1rem;
+  }
+
+  .email-draft-targets select {
+    height: 2.35rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .email-draft-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .email-draft-image-tools {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.75rem;
+    background-color: #f7f7f7;
+  }
+
+  .email-draft-image-tools label {
+    font-weight: 700;
+  }
+
+  .email-draft-image-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+
+  .email-draft-image-row input {
+    flex: 1 1 14rem;
+  }
+
+  .email-draft-image-status {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0.35rem 0 0;
+  }
+
+  .email-draft-form-actions {
+    justify-content: flex-start;
+  }
+
+  .email-draft-preview-actions {
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+
+  .email-draft-preview {
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .email-draft-list {
+    margin: 1rem;
+    padding: 1rem;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .email-draft-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .email-draft-preview-actions {
+      justify-content: flex-start;
+    }
+
+    .email-draft-target-row {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .email-draft-target-row .email-draft-button {
+      justify-self: start;
+    }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<a class="email-draft-page-link" href="{% url 'email_blast_list' %}">&larr; {% translate "All email blasts" %}</a>
+
+<div class="form-header">
+  <h1>{% if draft %}{% translate "Edit Email Draft" %}{% else %}{% translate "Email Draft" %}{% endif %}</h1>
+</div>
+
+<details style="margin: 1rem; padding: 1rem; background-color: #f5f5f5; border-radius: 8px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1rem;">{% translate "Writing Guide" %}</summary>
+
+  <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
+    <div style="flex: 1; min-width: 250px;">
+      <h4>{% translate "Message Body" %}</h4>
+      <p style="margin-top: 0;">{% translate "Write the main email message only. The greeting, recipient reason, and Philly Bike Action signoff are added automatically." %}</p>
+      <ul style="margin: 0; padding-left: 1.5rem;">
+        <li><code>**bold**</code> &rarr; <strong>bold</strong></li>
+        <li><code>*italic*</code> &rarr; <em>italic</em></li>
+        <li><code>[link text](https://example.com)</code></li>
+        <li><code>![image description](image-path)</code> for uploaded images</li>
+        <li><code>* item</code> for bullet lists</li>
+        <li><code>1. item</code> for numbered lists</li>
+        <li>Blank line between paragraphs</li>
+      </ul>
+    </div>
+
+    <div style="flex: 1; min-width: 250px;">
+      <h4>{% translate "Recipient Reason" %}</h4>
+      <p style="margin-top: 0;">{% translate "Enter a short phrase that completes the automatic reason line." %}</p>
+      <ul style="margin: 0; padding-left: 1.5rem;">
+        <li><code>live near the proposed safety improvements</code></li>
+        <li><code>signed the petition for safer streets</code></li>
+        <li>{% translate "Preview renders it as:" %} <code>You are receiving this email because you ...</code></li>
+      </ul>
+    </div>
+
+    <div style="flex: 1; min-width: 250px;">
+      <h4>{% translate "Template Variables" %}</h4>
+      <p style="margin: 0;">Django template syntax:</p>
+      <ul style="margin: 0; padding-left: 1.5rem;">
+        {% for key, value in preview_context.items %}
+        <li><code>{% templatetag openvariable %} {{ key }} {% templatetag closevariable %}</code> &rarr; "{{ value }}"</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</details>
+
+<details style="margin: 1rem; padding: 1rem; background-color: #fff8e6; border-radius: 8px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1rem;">{% translate "Automatic Email Frame" %}</summary>
+
+  <ul style="margin-top: 1rem; margin-bottom: 0;">
+    <li>{% translate "Greeting:" %} <code>Hi {% templatetag openvariable %} first_name {% templatetag closevariable %},</code></li>
+    <li>{% translate "Reason:" %} <code>&lt;i&gt;&lt;small&gt;You are receiving this email because you [recipient reason].&lt;/small&gt;&lt;/i&gt;</code></li>
+    <li>{% translate "Signoff:" %} <code>**Philly Bike Action**</code></li>
+  </ul>
+</details>
+
+<div class="email-draft-layout">
+  <div class="email-draft-panel">
+    <h2>{% translate "Compose" %}</h2>
+    {% if is_read_only %}
+      <p class="email-draft-target-help">
+        {% translate "This email blast has been approved or sent and can no longer be edited." %}
+      </p>
+    {% endif %}
+    <form id="email-draft-form"
+          class="email-draft-form{% if is_read_only %} email-draft-form-readonly{% endif %}"
+          method="post"
+          action="{% if draft %}{% url 'email_draft_edit' draft_id=draft.id %}{% else %}{% url 'email_draft' %}{% endif %}"
+          hx-post="{% url 'email_draft_preview' %}"
+          hx-trigger="input delay:300ms from:#email-draft-form, change delay:100ms from:#email-draft-form, clearPreview from:body"
+          hx-target="#preview">
+      {% csrf_token %}
+
+      {{ form.non_field_errors }}
+
+      <p class="field-row field-subject">
+        {{ form.subject.label_tag }}
+        {{ form.subject.errors }}
+        {{ form.subject }}
+      </p>
+      <p class="field-row field-reply_to">
+        {{ form.reply_to.label_tag }}
+        {{ form.reply_to.errors }}
+        {{ form.reply_to }}
+      </p>
+
+      <p class="field-row field-body">
+        {{ form.body.label_tag }}
+        {{ form.body.errors }}
+        {{ form.body }}
+      </p>
+      {% if not is_read_only %}
+      <div class="email-draft-image-tools">
+        <label for="email-draft-image-upload">{% translate "Embed Image" %}</label>
+        <div class="email-draft-image-row">
+          <input id="email-draft-image-upload" type="file" accept="image/*">
+          <button type="button" class="email-draft-button email-draft-button-secondary email-draft-button-small" id="email-draft-image-upload-button">
+            {% translate "Upload and Insert" %}
+          </button>
+        </div>
+        <p class="email-draft-image-status" id="email-draft-image-status">
+          {% translate "Uploads insert Markdown at your cursor and are embedded inline when the blast is sent." %}
+        </p>
+      </div>
+      {% endif %}
+
+      <p class="field-row field-target_name">
+        {{ form.target_name.label_tag }}
+        {{ form.target_name.errors }}
+        {{ form.target_name }}
+      </p>
+      <p class="field-row field-target_description">
+        {{ form.target_description.label_tag }}
+        {{ form.target_description.errors }}
+        {{ form.target_description }}
+      </p>
+      <p class="field-row field-target_operator">
+        {{ form.target_operator.label_tag }}
+        {{ form.target_operator.errors }}
+        {{ form.target_operator }}
+      </p>
+
+      <div class="email-draft-targets">
+        <div class="email-draft-targets-header">
+          <strong>{% translate "Targets" %}</strong>
+          {% if not is_read_only %}
+          <button type="button" class="email-draft-button email-draft-button-primary email-draft-button-small" id="add-email-draft-target">
+            {% translate "Add Target" %}
+          </button>
+          {% endif %}
+        </div>
+        <p class="email-draft-target-help">{% translate "Add one target per row. Recipients are deduplicated across all targets." %}</p>
+
+        <div id="email-draft-target-rows">
+          {% for row in target_rows %}
+          <div class="email-draft-target-row" data-target-row data-target-kind="{{ row.target_type }}" data-selected-target="{{ row.target_id }}">
+            <select name="target_type_{{ forloop.counter0 }}" data-target-type>
+              <option value="">{% translate "Select target type" %}</option>
+              {% for value, label in target_type_choices %}
+              <option value="{{ value }}" {% if value == row.target_type %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <div>
+              <select class="email-draft-target-value" name="target_value_{{ forloop.counter0 }}" data-target-value></select>
+              <textarea class="email-draft-target-geojson"
+                        name="target_geojson_{{ forloop.counter0 }}"
+                        rows="6"
+                        placeholder="Paste a GeoJSON Polygon, MultiPolygon, Feature, or FeatureCollection"
+                        data-target-geojson
+                        {% if is_read_only %}readonly{% endif %}>{{ row.target_geojson }}</textarea>
+              <small class="email-draft-geojson-help">
+                {% translate "Use" %}
+                <a href="https://geojson.io/#map=10.15/40.0024/-75.1704" target="_blank" rel="noopener">geojson.io</a>
+                {% translate "to draw a boundary, then paste the GeoJSON here." %}
+              </small>
+            </div>
+            {% if not is_read_only %}
+            <button type="button"
+                    class="email-draft-button email-draft-button-secondary email-draft-icon-button"
+                    data-remove-target
+                    aria-label="{% translate "Remove target" %}"
+                    title="{% translate "Remove target" %}">&times;</button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if not is_read_only %}
+      <div class="email-draft-actions email-draft-form-actions">
+        <button type="button" class="email-draft-button email-draft-button-muted" onclick="loadExample()">
+          {% translate "Load Example" %}
+        </button>
+        <button type="button" class="email-draft-button email-draft-button-secondary" onclick="clearFields()">
+          {% translate "Clear Fields" %}
+        </button>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+  <div class="email-draft-panel email-draft-preview">
+    <h2>{% translate "Preview" %}</h2>
+    <div id="preview">
+      <p style="color: #666; font-style: italic;">{% translate "Enter subject and body to see preview" %}</p>
+    </div>
+    {% if not is_read_only %}
+    <div class="email-draft-actions email-draft-preview-actions">
+      <button type="submit" class="email-draft-button email-draft-button-secondary" name="action" value="save_draft" form="email-draft-form">
+        {% translate "Save Draft" %}
+      </button>
+      <button type="submit" class="email-draft-button email-draft-button-muted" name="action" value="send_example" form="email-draft-form">
+        {% translate "Send Test to Myself" %}
+      </button>
+      <button type="submit" class="email-draft-button email-draft-button-primary" name="action" value="submit" form="email-draft-form">
+        {% if draft.status == "submitted" %}
+          {% translate "Update Submission" %}
+        {% else %}
+          {% translate "Submit Draft Blast" %}
+        {% endif %}
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{{ target_choice_groups|json_script:"email-draft-target-choices" }}
+<script>
+  const COOKIE_DAYS = 7;
+  const HAS_DRAFT = {% if draft %}true{% else %}false{% endif %};
+  const DRAFT_ID = '{% if draft %}{{ draft.id }}{% endif %}';
+  const TARGET_CHOICES = JSON.parse(document.getElementById('email-draft-target-choices').textContent);
+  const TARGET_TYPE_CHOICES = [
+    {% for value, label in target_type_choices %}
+      {value: '{{ value|escapejs }}', label: '{{ label|escapejs }}'},
+    {% endfor %}
+  ];
+
+  function setCookie(name, value) {
+    const expires = new Date(Date.now() + COOKIE_DAYS * 864e5).toUTCString();
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
+  }
+
+  function getCookie(name) {
+    const value = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+    return value ? decodeURIComponent(value.split('=')[1]) : '';
+  }
+
+  function deleteCookie(name) {
+    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  }
+
+  function csrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+  }
+
+  function insertAtCursor(textarea, text) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(end);
+    const prefix = before && !before.endsWith('\n') ? '\n\n' : '';
+    const suffix = after && !after.startsWith('\n') ? '\n\n' : '';
+    textarea.value = before + prefix + text + suffix + after;
+    const cursor = (before + prefix + text).length;
+    textarea.focus();
+    textarea.setSelectionRange(cursor, cursor);
+  }
+
+  async function uploadEmailDraftImage() {
+    const input = document.getElementById('email-draft-image-upload');
+    const status = document.getElementById('email-draft-image-status');
+    const body = document.getElementById('id_body');
+    if (!input || !input.files.length) {
+      status.textContent = '{% translate "Choose an image first." %}';
+      return;
+    }
+
+    status.textContent = '{% translate "Uploading image..." %}';
+    const formData = new FormData();
+    formData.append('image', input.files[0]);
+    formData.append('csrfmiddlewaretoken', csrfToken());
+    if (DRAFT_ID) {
+      formData.append('draft_id', DRAFT_ID);
+    }
+
+    const response = await fetch('{% url "email_draft_upload_image" %}', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+      headers: {'X-CSRFToken': csrfToken()}
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      status.textContent = payload.error || '{% translate "Image upload failed." %}';
+      return;
+    }
+
+    insertAtCursor(body, payload.markdown);
+    saveFields();
+    htmx.trigger('#id_body', 'input');
+    input.value = '';
+    status.textContent = '{% translate "Image uploaded and inserted." %}';
+  }
+
+  function saveFields() {
+    setCookie('email_draft_subject', document.getElementById('id_subject').value);
+    setCookie('email_draft_body', document.getElementById('id_body').value);
+    setCookie('email_draft_reply_to', document.getElementById('id_reply_to').value);
+  }
+
+  function loadFields() {
+    const subject = getCookie('email_draft_subject');
+    const body = getCookie('email_draft_body');
+    const replyTo = getCookie('email_draft_reply_to');
+    if (!HAS_DRAFT) {
+      if (subject) document.getElementById('id_subject').value = subject;
+      if (body) document.getElementById('id_body').value = body;
+      if (replyTo) document.getElementById('id_reply_to').value = replyTo;
+    }
+    if (HAS_DRAFT || subject || body || replyTo) {
+      htmx.trigger('#id_body', 'input');
+    }
+  }
+
+  function clearFields() {
+    document.getElementById('id_subject').value = '';
+    document.getElementById('id_body').value = '';
+    document.getElementById('id_reply_to').value = '';
+    deleteCookie('email_draft_subject');
+    deleteCookie('email_draft_body');
+    deleteCookie('email_draft_reply_to');
+    htmx.trigger(document.body, 'clearPreview');
+  }
+
+  function loadExample() {
+    const exampleSubject = 'Thanks for signing up!';
+    const exampleBody = `Thanks for signing up for <a href="https://bikeaction.org/">Event</a>.
+
+We are excited to have you involved. More details are below.`;
+
+    document.getElementById('id_subject').value = exampleSubject;
+    document.getElementById('id_body').value = exampleBody;
+    saveFields();
+    htmx.trigger('#id_body', 'input');
+  }
+
+  document.getElementById('id_subject').addEventListener('input', saveFields);
+  document.getElementById('id_body').addEventListener('input', saveFields);
+  document.getElementById('id_reply_to').addEventListener('input', saveFields);
+  const uploadImageButton = document.getElementById('email-draft-image-upload-button');
+  if (uploadImageButton) {
+    uploadImageButton.addEventListener('click', uploadEmailDraftImage);
+  }
+
+  function targetTypeOptions(selectedValue) {
+    let html = '<option value="">{% translate "Select target type" %}</option>';
+    TARGET_TYPE_CHOICES.forEach(function(choice) {
+      const selected = choice.value === selectedValue ? ' selected' : '';
+      html += '<option value="' + choice.value + '"' + selected + '>' + choice.label + '</option>';
+    });
+    return html;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function targetValueOptions(targetType, selectedValue) {
+    let html = '<option value="">{% translate "Select target" %}</option>';
+    (TARGET_CHOICES[targetType] || []).forEach(function(choice) {
+      const selected = String(choice[0]) === String(selectedValue) ? ' selected' : '';
+      html += '<option value="' + escapeHtml(choice[0]) + '"' + selected + '>' + escapeHtml(choice[1]) + '</option>';
+    });
+    return html;
+  }
+
+  function setupTargetRow(row) {
+    const typeSelect = row.querySelector('[data-target-type]');
+    const valueSelect = row.querySelector('[data-target-value]');
+    const removeButton = row.querySelector('[data-remove-target]');
+
+    function updateRow(selectedValue) {
+      const targetType = typeSelect.value;
+      row.dataset.targetKind = targetType;
+      valueSelect.innerHTML = targetValueOptions(targetType, selectedValue || '');
+      row.dataset.selectedTarget = '';
+    }
+
+    typeSelect.addEventListener('change', function() {
+      row.dataset.selectedTarget = '';
+      updateRow('');
+    });
+    valueSelect.addEventListener('change', function() {
+      row.dataset.selectedTarget = valueSelect.value;
+    });
+    if (removeButton) {
+      removeButton.addEventListener('click', function() {
+        row.remove();
+        renumberTargetRows();
+        htmx.trigger('#email-draft-form', 'change');
+      });
+    }
+    updateRow(row.dataset.selectedTarget);
+  }
+
+  function renumberTargetRows() {
+    document.querySelectorAll('[data-target-row]').forEach(function(row, index) {
+      row.querySelector('[data-target-type]').name = 'target_type_' + index;
+      row.querySelector('[data-target-value]').name = 'target_value_' + index;
+      row.querySelector('[data-target-geojson]').name = 'target_geojson_' + index;
+    });
+  }
+
+  function addTargetRow() {
+    const rows = document.getElementById('email-draft-target-rows');
+    const index = rows.querySelectorAll('[data-target-row]').length;
+    const row = document.createElement('div');
+    row.className = 'email-draft-target-row';
+    row.dataset.targetRow = '';
+    row.dataset.targetKind = '';
+    row.dataset.selectedTarget = '';
+    row.innerHTML = [
+      '<select name="target_type_' + index + '" data-target-type>' + targetTypeOptions('') + '</select>',
+      '<div>',
+      '<select class="email-draft-target-value" name="target_value_' + index + '" data-target-value></select>',
+      '<textarea class="email-draft-target-geojson" name="target_geojson_' + index + '" rows="6" placeholder="Paste a GeoJSON Polygon, MultiPolygon, Feature, or FeatureCollection" data-target-geojson></textarea>',
+      '<small class="email-draft-geojson-help">{% translate "Use" %} <a href="https://geojson.io/#map=10.15/40.0024/-75.1704" target="_blank" rel="noopener">geojson.io</a> {% translate "to draw a boundary, then paste the GeoJSON here." %}</small>',
+      '</div>',
+      '<button type="button" class="email-draft-button email-draft-button-secondary email-draft-icon-button" data-remove-target aria-label="{% translate "Remove target" %}" title="{% translate "Remove target" %}">&times;</button>'
+    ].join('');
+    rows.appendChild(row);
+    setupTargetRow(row);
+  }
+
+  const addTargetButton = document.getElementById('add-email-draft-target');
+  if (addTargetButton) {
+    addTargetButton.addEventListener('click', function() {
+      addTargetRow();
+      htmx.trigger('#email-draft-form', 'change');
+    });
+  }
+
+  document.querySelectorAll('[data-target-row]').forEach(setupTargetRow);
+  renumberTargetRows();
+
+  // Load fields and trigger preview once htmx is ready
+  document.body.addEventListener('htmx:load', function() {
+    loadFields();
+  }, {once: true});
+</script>
+{% endblock %}

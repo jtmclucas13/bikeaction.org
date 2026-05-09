@@ -113,6 +113,7 @@ INSTALLED_APPS = [
     "admin_extra_buttons",
     # Our apps
     "pbaabp",
+    "emailblasts",
     "pages",
     "membership",
     "profiles",

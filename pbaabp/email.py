@@ -1,10 +1,14 @@
+import mimetypes
 import os
+from email.mime.image import MIMEImage
+from email.utils import make_msgid
 
 import markdown
 import pynliner
 from anymail.message import attach_inline_image_file
 from bs4 import BeautifulSoup
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.core.mail import EmailMultiAlternatives
 from django.template import TemplateDoesNotExist, TemplateSyntaxError, engines
 from django.template.loader import get_template
@@ -119,8 +123,27 @@ def render_email_html(message, for_preview=False):
             if src.startswith(EMAIL_IMAGE_PATH):
                 filename = os.path.basename(src)
                 img["src"] = f"/email-draft/image/{filename}"
+            elif src.startswith("media/"):
+                img["src"] = f"{settings.MEDIA_URL}{src.removeprefix('media/')}"
 
     return _inline_css_and_wrap(soup)
+
+
+def attach_inline_image(mail, src):
+    if src.startswith("media/"):
+        path = src.removeprefix("media/")
+        content_type, _ = mimetypes.guess_type(path)
+        subtype = content_type.split("/", 1)[1] if content_type else None
+        with default_storage.open(path, "rb") as image_file:
+            image = MIMEImage(image_file.read(), _subtype=subtype)
+
+        cid = make_msgid()[1:-1]
+        image.add_header("Content-ID", f"<{cid}>")
+        image.add_header("Content-Disposition", "inline", filename=os.path.basename(path))
+        mail.attach(image)
+        return cid
+
+    return attach_inline_image_file(mail, src)
 
 
 def send_email_message(
@@ -207,7 +230,7 @@ def send_email_message(
     mail.mixed_subtype = "related"
 
     for img in soup.findAll("img"):
-        cid = attach_inline_image_file(mail, img["src"])
+        cid = attach_inline_image(mail, img["src"])
         img["src"] = "cid:" + cid
 
     html = _inline_css_and_wrap(soup)
