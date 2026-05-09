@@ -59,6 +59,7 @@ class EmailBlast(models.Model):
         DRAFT = "draft", "Draft"
         SUBMITTED = "submitted", "Submitted"
         APPROVED = "approved", "Approved"
+        SENDING = "sending", "Sending"
         SENT = "sent", "Sent"
         REJECTED = "rejected", "Rejected"
 
@@ -92,3 +93,25 @@ class EmailBlast(models.Model):
         if not self.target:
             return "No targets"
         return self.target.name
+
+
+class EmailBlastDelivery(models.Model):
+    email_blast = models.ForeignKey(EmailBlast, on_delete=models.CASCADE, related_name="deliveries")
+    profile = models.ForeignKey(
+        "profiles.Profile", blank=True, null=True, on_delete=models.SET_NULL
+    )
+    email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("email_blast", "email"),
+                name="unique_email_blast_delivery_email",
+            )
+        ]
+        verbose_name_plural = "email blast deliveries"
+
+    def __str__(self):
+        return f"{self.email_blast}: {self.email}"

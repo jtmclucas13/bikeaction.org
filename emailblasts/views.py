@@ -51,6 +51,7 @@ def email_blast_list(request):
                     status__in=[
                         EmailBlast.Status.SUBMITTED,
                         EmailBlast.Status.APPROVED,
+                        EmailBlast.Status.SENDING,
                     ]
                 ).order_by("-updated_at")
             ),
