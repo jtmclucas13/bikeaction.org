@@ -460,6 +460,9 @@
       <button type="submit" class="email-draft-button email-draft-button-secondary" name="action" value="save_draft" form="email-draft-form">
         {% translate "Save Draft" %}
       </button>
+      <button type="submit" class="email-draft-button email-draft-button-muted" name="action" value="send_example" form="email-draft-form">
+        {% translate "Send Test to Myself" %}
+      </button>
       <button type="submit" class="email-draft-button email-draft-button-primary" name="action" value="submit" form="email-draft-form">
         {% if draft.status == "submitted" %}
           {% translate "Update Submission" %}

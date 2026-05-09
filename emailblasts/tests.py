@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import Permission
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -30,7 +31,7 @@ from emailblasts.views import (
 )
 from events.models import EventSignIn, ScheduledEvent
 from facets.models import District
-from pbaabp.email import render_email_html
+from pbaabp.email import render_email_html, send_email_message
 from profiles.models import DoNotEmail, Profile
 
 
@@ -161,7 +162,10 @@ class EmailBlastSendTaskTests(TestCase):
 class EmailBlastImageTests(TestCase):
     def setUp(self):
         self.media_root = tempfile.mkdtemp()
-        self.settings_override = override_settings(MEDIA_ROOT=self.media_root)
+        self.settings_override = override_settings(
+            MEDIA_ROOT=self.media_root,
+            EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        )
         self.settings_override.enable()
         self.user = User.objects.create_user(
             username="organizer",
@@ -200,6 +204,72 @@ class EmailBlastImageTests(TestCase):
         )
 
         self.assertIn("/media/emailblasts/images/banner.png", html)
+
+    def test_send_email_inlines_uploaded_media_image_from_storage(self):
+        image = SimpleUploadedFile(
+            "banner.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff,\x00\x00"
+            b"\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        email_image = EmailBlastImage.objects.create(
+            created_by=self.user,
+            image=image,
+            original_filename="banner.gif",
+        )
+
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="Image test",
+            message=f"![Banner]({email_image.email_src})",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+
+
+class EmailBlastExampleSendTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="organizer",
+            email="organizer@example.com",
+            password="password",
+            first_name="Olivia",
+            last_name="Organizer",
+        )
+        permission = Permission.objects.get(codename="can_organize")
+        self.user.user_permissions.add(permission)
+        self.client.force_login(self.user)
+
+    def form_data(self, **overrides):
+        data = {
+            "subject": "Test blast",
+            "reply_to": "reply@bikeaction.org",
+            "target_name": "All profiles",
+            "target_description": "have a PBA account",
+            "target_operator": EmailBlastTargetNode.Operator.OR,
+            "body": "Main message",
+            "target_type_0": EmailBlastTargetNode.TargetType.ALL_PROFILES,
+            "target_value_0": "",
+            "target_geojson_0": "",
+            "action": "send_example",
+        }
+        data.update(overrides)
+        return data
+
+    @patch("emailblasts.views.send_email_message")
+    def test_send_example_emails_current_user_without_saving_blast(self, mock_send_email):
+        response = self.client.post(reverse("email_draft"), self.form_data())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(EmailBlast.objects.count(), 0)
+        mock_send_email.assert_called_once()
+        self.assertEqual(mock_send_email.call_args.kwargs["to"], ["organizer@example.com"])
+        self.assertEqual(mock_send_email.call_args.kwargs["subject"], "[TEST] Test blast")
+        self.assertEqual(mock_send_email.call_args.kwargs["reply_to"], ["reply@bikeaction.org"])
+        self.assertIn("Hi {{ first_name }}", mock_send_email.call_args.kwargs["message"])
 
 
 class EmailBlastTargetingTests(TestCase):

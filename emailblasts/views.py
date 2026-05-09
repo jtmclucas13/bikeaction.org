@@ -15,7 +15,12 @@ from emailblasts.forms import EmailDraftForm
 from emailblasts.models import EmailBlast, EmailBlastImage, EmailBlastTarget, EmailBlastTargetNode
 from emailblasts.utils import email_blast_full_body
 from events.models import EventSignIn
-from pbaabp.email import EMAIL_IMAGE_PATH, render_email_html, template_from_string
+from pbaabp.email import (
+    EMAIL_IMAGE_PATH,
+    render_email_html,
+    send_email_message,
+    template_from_string,
+)
 from profiles.models import Profile
 
 EMAIL_PREVIEW_CONTEXT = {
@@ -79,6 +84,22 @@ def email_draft(request, draft_id=None):
             return redirect("email_draft_edit", draft_id=draft.id)
         form = EmailDraftForm(request.POST)
         if form.is_valid():
+            action = request.POST.get("action")
+            if action == "send_example":
+                try:
+                    _send_email_blast_example(form, request.user)
+                    messages.success(request, f"Sent a test email to {request.user.email}.")
+                except ValueError as error:
+                    messages.error(request, str(error))
+                target_rows = _email_draft_target_rows_from_post(request.POST)
+                return _render_email_draft(
+                    request,
+                    form=form,
+                    draft=draft,
+                    is_read_only=is_read_only,
+                    target_rows=target_rows,
+                )
+
             target_queryset, target_name, target_data = _email_draft_target(form)
             target = _email_blast_target_object(
                 form.cleaned_data["target_name"],
@@ -88,7 +109,6 @@ def email_draft(request, draft_id=None):
                 request.user,
                 existing_target=draft.target if draft else None,
             )
-            action = request.POST.get("action")
             status = (
                 EmailBlast.Status.DRAFT if action == "save_draft" else EmailBlast.Status.SUBMITTED
             )
@@ -127,6 +147,16 @@ def email_draft(request, draft_id=None):
         form = EmailDraftForm()
         target_rows = [{"target_type": "", "target_id": "", "target_geojson": ""}]
 
+    return _render_email_draft(
+        request,
+        form=form,
+        draft=draft,
+        is_read_only=is_read_only,
+        target_rows=target_rows,
+    )
+
+
+def _render_email_draft(request, form, draft, is_read_only, target_rows):
     return render(
         request,
         "emailblasts/email_draft.html",
@@ -139,6 +169,31 @@ def email_draft(request, draft_id=None):
             "target_rows": target_rows,
             "target_type_choices": form.target_type_choices(),
         },
+    )
+
+
+def _send_email_blast_example(form, user):
+    if not user.email:
+        raise ValueError("User does not have an email address.")
+
+    body = email_blast_full_body(
+        form.cleaned_data["body"],
+        form.cleaned_data["target_description"],
+    )
+    send_email_message(
+        template_name=None,
+        from_=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+        context={
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "name": user.get_full_name(),
+            "email": user.email,
+            "target_description": form.cleaned_data["target_description"],
+        },
+        subject=f"[TEST] {form.cleaned_data['subject']}",
+        message=body,
+        reply_to=[form.cleaned_data["reply_to"]],
     )
 
 
