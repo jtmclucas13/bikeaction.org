@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}Email Blasts{% endblock %}
+{% block extra_head %}
+<style>
+  .email-blast-list {
+    margin: 1rem;
+  }
+
+  .email-blast-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .email-blast-list-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .email-blast-list-header h1 {
+    margin: 0;
+  }
+
+  .email-blast-list-section {
+    margin-bottom: 2rem;
+  }
+
+  .email-blast-table-wrap {
+    overflow-x: auto;
+  }
+
+  .email-blast-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+  }
+
+  .email-blast-table th,
+  .email-blast-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .email-blast-table th {
+    background-color: #f5f5f5;
+    white-space: nowrap;
+  }
+
+  .email-blast-subject {
+    min-width: 16rem;
+  }
+
+  .email-blast-meta {
+    color: #555;
+    font-size: 0.9rem;
+  }
+
+  .email-blast-scope-link {
+    font-weight: bold;
+  }
+
+  .email-blast-empty {
+    padding: 1rem;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="email-blast-list">
+  <div class="email-blast-list-header">
+    <div>
+      <h1>{% translate "Email Blasts" %}</h1>
+      <div class="email-blast-meta">
+        {% if show_all %}
+          {% translate "Showing all blasts" %}
+        {% else %}
+          {% translate "Showing your blasts" %}
+        {% endif %}
+      </div>
+    </div>
+    <div class="email-blast-list-controls">
+      {% if show_all %}
+        <a class="email-blast-scope-link" href="{% url 'email_blast_list' %}">{% translate "View mine" %}</a>
+      {% else %}
+        <a class="email-blast-scope-link" href="{% url 'email_blast_list' %}?scope=all">{% translate "View all" %}</a>
+      {% endif %}
+      <a class="submit-button" href="{% url 'email_draft' %}">{% translate "New Draft" %}</a>
+    </div>
+  </div>
+
+  <section class="email-blast-list-section">
+    <h2>{% translate "Drafts" %}</h2>
+    {% if draft_blasts %}
+      <div class="email-blast-table-wrap">
+        <table class="email-blast-table">
+          <thead>
+            <tr>
+              <th>{% translate "Subject" %}</th>
+              <th>{% translate "Target" %}</th>
+              <th>{% translate "Profiles" %}</th>
+              <th>{% translate "Reply-To" %}</th>
+              {% if show_all %}<th>{% translate "Submitter" %}</th>{% endif %}
+              <th>{% translate "Updated" %}</th>
+              <th>{% translate "Action" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for blast in draft_blasts %}
+              <tr>
+                <td class="email-blast-subject">
+                  <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{{ blast.subject }}</a>
+                </td>
+                <td>{{ blast.display_target_name }}</td>
+                <td>{{ blast.display_target_count }}</td>
+                <td>{{ blast.reply_to }}</td>
+                {% if show_all %}<td>{{ blast.submitter.email|default:"-" }}</td>{% endif %}
+                <td class="email-blast-meta">{{ blast.updated_at }}</td>
+                <td>
+                  {% if blast.submitter_id == request.user.id %}
+                    <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "Edit" %}</a>
+                  {% else %}
+                    <span class="email-blast-meta">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="email-blast-empty">{% translate "No saved drafts." %}</p>
+    {% endif %}
+  </section>
+
+  <section class="email-blast-list-section">
+    <h2>{% translate "Submissions" %}</h2>
+    {% if submitted_blasts %}
+      <div class="email-blast-table-wrap">
+        <table class="email-blast-table">
+          <thead>
+            <tr>
+              <th>{% translate "Subject" %}</th>
+              <th>{% translate "Status" %}</th>
+              <th>{% translate "Target" %}</th>
+              <th>{% translate "Profiles" %}</th>
+              <th>{% translate "Reply-To" %}</th>
+              {% if show_all %}<th>{% translate "Submitter" %}</th>{% endif %}
+              <th>{% translate "Updated" %}</th>
+              <th>{% translate "Action" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for blast in submitted_blasts %}
+              <tr>
+                <td class="email-blast-subject">
+                  <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{{ blast.subject }}</a>
+                </td>
+                <td>{{ blast.get_status_display }}</td>
+                <td>{{ blast.display_target_name }}</td>
+                <td>{{ blast.display_target_count }}</td>
+                <td>{{ blast.reply_to }}</td>
+                {% if show_all %}<td>{{ blast.submitter.email|default:"-" }}</td>{% endif %}
+                <td class="email-blast-meta">{{ blast.updated_at }}</td>
+                <td>
+                  {% if blast.submitter_id == request.user.id %}
+                    <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "Edit" %}</a>
+                  {% else %}
+                    <span class="email-blast-meta">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="email-blast-empty">{% translate "No submitted blasts." %}</p>
+    {% endif %}
+  </section>
+
+  <section class="email-blast-list-section">
+    <h2>{% translate "Sent Blasts" %}</h2>
+    {% if sent_blasts %}
+      <div class="email-blast-table-wrap">
+        <table class="email-blast-table">
+          <thead>
+            <tr>
+              <th>{% translate "Subject" %}</th>
+              <th>{% translate "Target" %}</th>
+              <th>{% translate "Profiles" %}</th>
+              <th>{% translate "Reply-To" %}</th>
+              {% if show_all %}<th>{% translate "Submitter" %}</th>{% endif %}
+              <th>{% translate "Sent" %}</th>
+              <th>{% translate "Action" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for blast in sent_blasts %}
+              <tr>
+                <td class="email-blast-subject">{{ blast.subject }}</td>
+                <td>{{ blast.display_target_name }}</td>
+                <td>{{ blast.display_target_count }}</td>
+                <td>{{ blast.reply_to }}</td>
+                {% if show_all %}<td>{{ blast.submitter.email|default:"-" }}</td>{% endif %}
+                <td class="email-blast-meta">{{ blast.updated_at }}</td>
+                <td>
+                  {% if blast.submitter_id == request.user.id %}
+                    <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "View" %}</a>
+                  {% else %}
+                    <span class="email-blast-meta">{% translate "Imported" %}</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="email-blast-empty">{% translate "No sent blasts." %}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

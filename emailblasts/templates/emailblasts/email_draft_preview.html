@@ -1,0 +1,49 @@
+{% load i18n %}
+{% if preview_subject %}
+<p><strong>{% translate "Subject:" %}</strong> {{ preview_subject }}</p>
+{% endif %}
+{% if has_target_count %}
+<p><strong>{% translate "Target:" %}</strong> {{ target_name }} ({{ target_count }} {% translate "profiles" %})</p>
+{% if target_geojson %}
+<div id="email-draft-target-map" style="height: 280px; width: 100%; margin-bottom: 1rem; z-index: 1;"></div>
+<script>
+  (function() {
+    const targetGeojson = {{ target_geojson|safe }};
+    const mapElement = document.getElementById('email-draft-target-map');
+    if (!mapElement || typeof L === 'undefined') return;
+
+    if (window.emailDraftTargetMap) {
+      window.emailDraftTargetMap.remove();
+    }
+
+    const map = L.map(mapElement);
+    window.emailDraftTargetMap = map;
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const boundary = L.geoJSON(targetGeojson, {
+      style: {
+        color: '#d01b72',
+        fillColor: '#d01b72',
+        fillOpacity: 0.2,
+        weight: 3
+      }
+    }).addTo(map);
+
+    map.fitBounds(boundary.getBounds(), {padding: [16, 16]});
+  })();
+</script>
+{% endif %}
+{% elif target_errors %}
+<p style="color: #a33;"><strong>{% translate "Target:" %}</strong> {{ target_errors|join:", " }}</p>
+{% endif %}
+{% if preview_html %}
+<div style="border: 1px solid #ccc; background-color: white;">
+  {{ preview_html|safe }}
+</div>
+{% else %}
+<p style="color: #666; font-style: italic;">{% translate "Enter subject and body to see preview" %}</p>
+{% endif %}
