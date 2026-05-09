@@ -7,12 +7,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.gis.geos import GEOSGeometry
 from django.db.models.functions import Lower
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from campaigns.models import PetitionSignature
 from emailblasts.forms import EmailDraftForm
-from emailblasts.models import EmailBlast, EmailBlastTarget, EmailBlastTargetNode
+from emailblasts.models import EmailBlast, EmailBlastImage, EmailBlastTarget, EmailBlastTargetNode
 from emailblasts.utils import email_blast_full_body
 from events.models import EventSignIn
 from pbaabp.email import EMAIL_IMAGE_PATH, render_email_html, template_from_string
@@ -260,6 +260,41 @@ def email_draft_image(request, filename):
         raise Http404()
 
     return FileResponse(open(image_path, "rb"), content_type="image/png")
+
+
+@login_required
+@permission_required("profiles.can_organize", raise_exception=True)
+def email_draft_upload_image(request):
+    if request.method != "POST":
+        raise Http404()
+
+    image = request.FILES.get("image")
+    if image is None:
+        return JsonResponse({"error": "Choose an image to upload."}, status=400)
+
+    content_type = image.content_type or ""
+    if not content_type.startswith("image/"):
+        return JsonResponse({"error": "Uploaded file must be an image."}, status=400)
+
+    draft = None
+    draft_id = request.POST.get("draft_id")
+    if draft_id:
+        draft = get_object_or_404(EmailBlast, id=draft_id)
+
+    email_image = EmailBlastImage.objects.create(
+        email_blast=draft,
+        created_by=request.user,
+        image=image,
+        original_filename=image.name,
+    )
+
+    return JsonResponse(
+        {
+            "markdown": f"![{email_image.original_filename}]({email_image.email_src})",
+            "src": email_image.email_src,
+            "preview_url": email_image.image.url,
+        }
+    )
 
 
 def _email_draft_target(form):

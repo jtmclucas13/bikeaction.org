@@ -4,6 +4,7 @@ from django.db import transaction
 from emailblasts.models import (
     EmailBlast,
     EmailBlastDelivery,
+    EmailBlastImage,
     EmailBlastTarget,
     EmailBlastTargetNode,
 )
@@ -114,6 +115,13 @@ class EmailBlastDeliveryInline(admin.TabularInline):
         return False
 
 
+class EmailBlastImageInline(admin.TabularInline):
+    model = EmailBlastImage
+    extra = 0
+    fields = ("image", "original_filename", "created_by", "created_at")
+    readonly_fields = ("created_by", "created_at")
+
+
 @admin.register(EmailBlast)
 class EmailBlastAdmin(admin.ModelAdmin):
     list_display = (
@@ -134,7 +142,7 @@ class EmailBlastAdmin(admin.ModelAdmin):
         "submitter__last_name",
     )
     readonly_fields = ("submitter", "created_at", "updated_at")
-    inlines = (EmailBlastDeliveryInline,)
+    inlines = (EmailBlastImageInline, EmailBlastDeliveryInline)
     actions = (
         mark_as_draft,
         mark_as_submitted,
@@ -150,3 +158,11 @@ class EmailBlastDeliveryAdmin(admin.ModelAdmin):
     list_filter = ("created_at", "sent_at")
     search_fields = ("email", "email_blast__subject", "profile__user__email")
     readonly_fields = ("email_blast", "profile", "email", "created_at", "sent_at")
+
+
+@admin.register(EmailBlastImage)
+class EmailBlastImageAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "email_blast", "created_by", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("original_filename", "image", "email_blast__subject", "created_by__email")
+    readonly_fields = ("created_by", "created_at")

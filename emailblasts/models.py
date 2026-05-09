@@ -96,6 +96,27 @@ class EmailBlast(models.Model):
         return self.target.name
 
 
+class EmailBlastImage(models.Model):
+    email_blast = models.ForeignKey(
+        EmailBlast,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    created_by = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to="emailblasts/images")
+    original_filename = models.CharField(max_length=255, blank=True)
+
+    @property
+    def email_src(self):
+        return f"media/{self.image.name}"
+
+    def __str__(self):
+        return self.original_filename or self.image.name
+
+
 class EmailBlastDelivery(models.Model):
     email_blast = models.ForeignKey(EmailBlast, on_delete=models.CASCADE, related_name="deliveries")
     profile = models.ForeignKey(

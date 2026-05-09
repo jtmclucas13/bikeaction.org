@@ -1,9 +1,14 @@
 import json
+import shutil
+import tempfile
 from unittest.mock import patch
 
+from django.contrib.auth.models import Permission
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from campaigns.models import Petition, PetitionSignature
@@ -11,6 +16,7 @@ from emailblasts.forms import EmailDraftForm
 from emailblasts.models import (
     EmailBlast,
     EmailBlastDelivery,
+    EmailBlastImage,
     EmailBlastTarget,
     EmailBlastTargetNode,
 )
@@ -24,6 +30,7 @@ from emailblasts.views import (
 )
 from events.models import EventSignIn, ScheduledEvent
 from facets.models import District
+from pbaabp.email import render_email_html
 from profiles.models import DoNotEmail, Profile
 
 
@@ -149,6 +156,50 @@ class EmailBlastSendTaskTests(TestCase):
         self.assertIsNotNone(delivery.sent_at)
         blast.refresh_from_db()
         self.assertEqual(blast.status, EmailBlast.Status.SENT)
+
+
+class EmailBlastImageTests(TestCase):
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp()
+        self.settings_override = override_settings(MEDIA_ROOT=self.media_root)
+        self.settings_override.enable()
+        self.user = User.objects.create_user(
+            username="organizer",
+            email="organizer@example.com",
+            password="password",
+        )
+        permission = Permission.objects.get(codename="can_organize")
+        self.user.user_permissions.add(permission)
+        self.client.force_login(self.user)
+
+    def tearDown(self):
+        self.settings_override.disable()
+        shutil.rmtree(self.media_root)
+
+    def test_image_upload_returns_markdown_for_email_body(self):
+        image = SimpleUploadedFile(
+            "banner.png",
+            b"not-really-a-png",
+            content_type="image/png",
+        )
+
+        response = self.client.post(reverse("email_draft_upload_image"), {"image": image})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["markdown"].startswith("![banner.png](media/emailblasts/images/"))
+        self.assertEqual(EmailBlastImage.objects.count(), 1)
+        uploaded = EmailBlastImage.objects.get()
+        self.assertEqual(uploaded.created_by, self.user)
+        self.assertTrue(uploaded.image.storage.exists(uploaded.image.name))
+
+    def test_preview_rewrites_uploaded_media_image_paths(self):
+        html = render_email_html(
+            "![Banner](media/emailblasts/images/banner.png)",
+            for_preview=True,
+        )
+
+        self.assertIn("/media/emailblasts/images/banner.png", html)
 
 
 class EmailBlastTargetingTests(TestCase):

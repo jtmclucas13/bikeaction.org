@@ -119,6 +119,8 @@ def render_email_html(message, for_preview=False):
             if src.startswith(EMAIL_IMAGE_PATH):
                 filename = os.path.basename(src)
                 img["src"] = f"/email-draft/image/{filename}"
+            elif src.startswith("media/"):
+                img["src"] = f"{settings.MEDIA_URL}{src.removeprefix('media/')}"
 
     return _inline_css_and_wrap(soup)
 
