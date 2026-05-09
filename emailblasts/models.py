@@ -23,6 +23,7 @@ class EmailBlastTargetNode(models.Model):
         DIVISION = "division", "Division"
         GEOJSON = "geojson", "GeoJSON boundary"
         PETITION = "petition", "Petition signers"
+        EVENT_SIGNIN = "event_signin", "Event sign-ins"
         LEGACY = "legacy", "Legacy/custom targeting"
 
     class Operator(models.TextChoices):

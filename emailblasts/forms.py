@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from campaigns.models import Petition
 from emailblasts.models import EmailBlastTargetNode
 from emailblasts.utils import email_blast_full_body
+from events.models import ScheduledEvent
 from facets.models import District, Division, RegisteredCommunityOrganization, Ward
 from pbaabp.email import template_from_string
 
@@ -21,6 +22,7 @@ class EmailDraftForm(forms.Form):
         EmailBlastTargetNode.TargetType.DIVISION: "division",
         EmailBlastTargetNode.TargetType.GEOJSON: "geojson",
         EmailBlastTargetNode.TargetType.PETITION: "petition",
+        EmailBlastTargetNode.TargetType.EVENT_SIGNIN: "event_signin",
     }
     MODEL_BY_TARGET_FIELD = {
         "district": District,
@@ -28,6 +30,7 @@ class EmailDraftForm(forms.Form):
         "ward": Ward,
         "division": Division,
         "petition": Petition,
+        "event_signin": ScheduledEvent,
     }
 
     subject = forms.CharField(
@@ -102,6 +105,9 @@ class EmailDraftForm(forms.Form):
             ),
             "petition": self._model_choices(
                 Petition.objects.all(), key=lambda petition: petition.title
+            ),
+            "event_signin": self._model_choices(
+                ScheduledEvent.objects.all(), key=lambda event: event.start_datetime
             ),
         }
         self.cleaned_target_rows = []

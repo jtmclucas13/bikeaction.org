@@ -14,6 +14,7 @@ from campaigns.models import PetitionSignature
 from emailblasts.forms import EmailDraftForm
 from emailblasts.models import EmailBlast, EmailBlastTarget, EmailBlastTargetNode
 from emailblasts.utils import email_blast_full_body
+from events.models import EventSignIn
 from pbaabp.email import EMAIL_IMAGE_PATH, render_email_html, template_from_string
 from profiles.models import Profile
 
@@ -376,6 +377,17 @@ def _email_draft_target_profiles(target):
         )
         return Profile.objects.annotate(user_email_lower=Lower("user__email")).filter(
             user_email_lower__in=signer_emails
+        )
+    if target["target_type"] == EmailBlastTargetNode.TargetType.EVENT_SIGNIN:
+        sign_in_emails = (
+            EventSignIn.objects.filter(event_id=target["target_id"])
+            .exclude(email__isnull=True)
+            .exclude(email="")
+            .annotate(email_lower=Lower("email"))
+            .values_list("email_lower", flat=True)
+        )
+        return Profile.objects.annotate(user_email_lower=Lower("user__email")).filter(
+            user_email_lower__in=sign_in_emails
         )
     if target["target_type"] == EmailBlastTargetNode.TargetType.LEGACY:
         return Profile.objects.none()

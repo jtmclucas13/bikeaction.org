@@ -22,6 +22,7 @@ from emailblasts.views import (
     _email_draft_profiles_for_targets,
     _email_draft_target_name,
 )
+from events.models import EventSignIn, ScheduledEvent
 from facets.models import District
 from profiles.models import DoNotEmail, Profile
 
@@ -161,6 +162,13 @@ class EmailBlastTargetingTests(TestCase):
             "target_geojson": None,
         }
 
+    def create_event(self, title="Test Event"):
+        return ScheduledEvent.objects.create(
+            title=title,
+            status=ScheduledEvent.Status.SCHEDULED,
+            start_datetime=timezone.now(),
+        )
+
     def form_data(self, **overrides):
         data = {
             "subject": "Test blast",
@@ -282,6 +290,27 @@ class EmailBlastTargetingTests(TestCase):
         profiles = _email_draft_profiles_for_targets([target])
 
         self.assertCountEqual(profiles, [signer])
+
+    def test_event_signin_target_matches_profiles_by_signin_email_case_insensitively(self):
+        attendee = self.create_profile("Attendee@Example.com", 0, 0)
+        self.create_profile("other@example.com", 0, 0)
+        event = self.create_event("May Meetup")
+        EventSignIn.objects.create(
+            event=event,
+            first_name="Attendee",
+            last_name="Person",
+            email="attendee@example.com",
+            council_district=EventSignIn.District.DISTRICT_1,
+        )
+        target = self.target_data(
+            EmailBlastTargetNode.TargetType.EVENT_SIGNIN,
+            event.pk,
+            str(event),
+        )
+
+        profiles = _email_draft_profiles_for_targets([target])
+
+        self.assertCountEqual(profiles, [attendee])
 
     def test_persisted_target_evaluates_same_composed_logic(self):
         user = User.objects.create_user(username="organizer", email="organizer@example.com")
