@@ -4,7 +4,8 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from emailblasts.models import EmailBlast, EmailBlastDelivery
-from emailblasts.views import _email_blast_full_body, _email_blast_target_profiles
+from emailblasts.utils import email_blast_full_body
+from emailblasts.views import _email_blast_target_profiles
 from pbaabp.email import send_email_message
 from profiles.models import DoNotEmail
 
@@ -29,7 +30,7 @@ def send_email_blast(email_blast_id):
         blast.save(update_fields=["status", "updated_at"])
         return f"Email blast {email_blast_id} has no target."
 
-    body = _email_blast_full_body(blast.body, blast.target.description)
+    body = email_blast_full_body(blast.body, blast.target.description)
     profiles = (
         _email_blast_target_profiles(blast.target)
         .select_related("user")

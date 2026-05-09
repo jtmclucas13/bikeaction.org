@@ -6,12 +6,14 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.gis.geos import GEOSGeometry
+from django.db.models.functions import Lower
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from campaigns.models import PetitionSignature
 from emailblasts.forms import EmailDraftForm
 from emailblasts.models import EmailBlast, EmailBlastTarget, EmailBlastTargetNode
+from emailblasts.utils import email_blast_full_body
 from pbaabp.email import EMAIL_IMAGE_PATH, render_email_html, template_from_string
 from profiles.models import Profile
 
@@ -198,6 +200,7 @@ def email_draft_preview(request):
     target_name = ""
     target_errors = []
     target_geojson = ""
+    preview_errors = []
 
     if hasattr(settings, "EMAIL_SUBJECT_PREFIX") and subject:
         subject = f"{settings.EMAIL_SUBJECT_PREFIX} {subject}"
@@ -209,16 +212,17 @@ def email_draft_preview(request):
             **EMAIL_PREVIEW_CONTEXT,
             "target_description": target_description,
         }
-        full_body = _email_blast_full_body(body, target_description)
+        full_body = email_blast_full_body(body, target_description)
         try:
             rendered_body = template_from_string(full_body).render(preview_context)
-        except Exception:
-            rendered_body = full_body
-        preview_html = render_email_html(rendered_body, for_preview=True)
+            preview_html = render_email_html(rendered_body, for_preview=True)
+        except Exception as error:
+            preview_errors.append(f"Fix the template syntax before submitting: {error}")
 
     target_queryset, target_name, target_errors, target_geojson = _email_draft_target_from_post(
         request.POST
     )
+    target_errors = [*preview_errors, *target_errors]
     if target_queryset is not None:
         target_count = _email_draft_target_count(target_queryset)
 
@@ -289,32 +293,6 @@ def _email_draft_target_from_post(post_data):
 
 def _email_draft_target_data(form):
     return form.cleaned_data["target_rows"]
-
-
-def _email_blast_full_body(body, target_description):
-    return "\n\n".join(
-        [
-            "Hi {{ first_name }},",
-            f"<i><small>{_email_blast_target_reason(target_description)}</small></i>",
-            body.strip(),
-            "**Philly Bike Action**",
-        ]
-    )
-
-
-def _email_blast_target_reason(target_description):
-    reason = target_description.strip().rstrip(".")
-    if not reason:
-        reason = "match the selected audience"
-
-    lower_reason = reason.lower()
-    if lower_reason.startswith("you are receiving this email because"):
-        return f"{reason}."
-    if lower_reason.startswith("because "):
-        return f"You are receiving this email {reason}."
-    if lower_reason.startswith("you "):
-        return f"You are receiving this email because {reason}."
-    return f"You are receiving this email because you {reason}."
 
 
 def _email_draft_target_name(target_data, operator=EmailBlastTargetNode.Operator.OR):
@@ -393,9 +371,12 @@ def _email_draft_target_profiles(target):
             PetitionSignature.objects.filter(petition_id=target["target_id"])
             .exclude(email__isnull=True)
             .exclude(email="")
-            .values("email")
+            .annotate(email_lower=Lower("email"))
+            .values_list("email_lower", flat=True)
         )
-        return Profile.objects.filter(user__email__in=signer_emails)
+        return Profile.objects.annotate(user_email_lower=Lower("user__email")).filter(
+            user_email_lower__in=signer_emails
+        )
     if target["target_type"] == EmailBlastTargetNode.TargetType.LEGACY:
         return Profile.objects.none()
 

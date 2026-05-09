@@ -161,6 +161,35 @@ class EmailBlastTargetingTests(TestCase):
             "target_geojson": None,
         }
 
+    def form_data(self, **overrides):
+        data = {
+            "subject": "Test blast",
+            "reply_to": "organizer@bikeaction.org",
+            "target_name": "All profiles",
+            "target_description": "have a PBA account",
+            "target_operator": EmailBlastTargetNode.Operator.OR,
+            "body": "Main message",
+            "target_type_0": EmailBlastTargetNode.TargetType.ALL_PROFILES,
+            "target_value_0": "",
+            "target_geojson_0": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_invalid_template_syntax_is_rejected_by_form(self):
+        form = EmailDraftForm(data=self.form_data(body="Hello {% if first_name %}"))
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("template syntax", str(form.errors["__all__"]))
+
+    def test_invalid_template_syntax_in_recipient_reason_is_rejected_by_form(self):
+        form = EmailDraftForm(
+            data=self.form_data(target_description="live nearby {% if first_name %}")
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("template syntax", str(form.errors["__all__"]))
+
     def test_district_targets_can_be_combined_with_or_and_and(self):
         west = self.create_profile("west@example.com", 0.5, 0.5)
         middle = self.create_profile("middle@example.com", 1.5, 1.5)
@@ -220,6 +249,24 @@ class EmailBlastTargetingTests(TestCase):
     def test_petition_target_matches_profiles_by_signer_email(self):
         signer = self.create_profile("signer@example.com", 0, 0)
         self.create_profile("other@example.com", 0, 0)
+        petition = Petition.objects.create(title="Safer Streets")
+        PetitionSignature.objects.create(
+            petition=petition,
+            first_name="Signer",
+            email="signer@example.com",
+        )
+        target = self.target_data(
+            EmailBlastTargetNode.TargetType.PETITION,
+            petition.pk,
+            str(petition),
+        )
+
+        profiles = _email_draft_profiles_for_targets([target])
+
+        self.assertCountEqual(profiles, [signer])
+
+    def test_petition_target_matches_profiles_by_signer_email_case_insensitively(self):
+        signer = self.create_profile("Signer@Example.com", 0, 0)
         petition = Petition.objects.create(title="Safer Streets")
         PetitionSignature.objects.create(
             petition=petition,

@@ -8,7 +8,9 @@ from django.utils.translation import gettext_lazy as _
 
 from campaigns.models import Petition
 from emailblasts.models import EmailBlastTargetNode
+from emailblasts.utils import email_blast_full_body
 from facets.models import District, Division, RegisteredCommunityOrganization, Ward
+from pbaabp.email import template_from_string
 
 
 class EmailDraftForm(forms.Form):
@@ -128,6 +130,16 @@ class EmailDraftForm(forms.Form):
 
         if not self.cleaned_target_rows:
             raise ValidationError(_("Select at least one target."))
+
+        body = cleaned_data.get("body")
+        target_description = cleaned_data.get("target_description")
+        if body and target_description:
+            try:
+                template_from_string(email_blast_full_body(body, target_description))
+            except Exception as error:
+                raise ValidationError(
+                    _("Fix the Django template syntax in the message body or recipient reason.")
+                ) from error
 
         cleaned_data["target_rows"] = self.cleaned_target_rows
         return cleaned_data
