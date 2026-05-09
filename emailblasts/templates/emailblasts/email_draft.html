@@ -161,12 +161,24 @@
     display: block;
   }
 
+  .email-draft-target-row[data-target-kind="geojson"] .email-draft-geojson-help {
+    display: block;
+  }
+
   .email-draft-target-help {
     color: #666;
     font-size: 0.95rem;
     line-height: 1.35;
     margin: 0.25rem 0 0.5rem;
     text-align: left;
+  }
+
+  .email-draft-geojson-help {
+    color: #666;
+    display: none;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    margin: 0.35rem 0 0;
   }
 
   .email-draft-targets select,
@@ -363,6 +375,11 @@
                         placeholder="Paste a GeoJSON Polygon, MultiPolygon, Feature, or FeatureCollection"
                         data-target-geojson
                         {% if is_read_only %}readonly{% endif %}>{{ row.target_geojson }}</textarea>
+              <small class="email-draft-geojson-help">
+                {% translate "Use" %}
+                <a href="https://geojson.io/#map=10.15/40.0024/-75.1704" target="_blank" rel="noopener">geojson.io</a>
+                {% translate "to draw a boundary, then paste the GeoJSON here." %}
+              </small>
             </div>
             {% if not is_read_only %}
             <button type="button"
@@ -558,6 +575,7 @@ We are excited to have you involved. More details are below.`;
       '<div>',
       '<select class="email-draft-target-value" name="target_value_' + index + '" data-target-value></select>',
       '<textarea class="email-draft-target-geojson" name="target_geojson_' + index + '" rows="6" placeholder="Paste a GeoJSON Polygon, MultiPolygon, Feature, or FeatureCollection" data-target-geojson></textarea>',
+      '<small class="email-draft-geojson-help">{% translate "Use" %} <a href="https://geojson.io/#map=10.15/40.0024/-75.1704" target="_blank" rel="noopener">geojson.io</a> {% translate "to draw a boundary, then paste the GeoJSON here." %}</small>',
       '</div>',
       '<button type="button" class="email-draft-button email-draft-button-secondary email-draft-icon-button" data-remove-target aria-label="{% translate "Remove target" %}" title="{% translate "Remove target" %}">&times;</button>'
     ].join('');
