@@ -55,7 +55,9 @@ def send_email_blast(email_blast_id):
                     email=email_key,
                 )
         except IntegrityError:
-            continue
+            delivery = EmailBlastDelivery.objects.get(email_blast=blast, email=email_key)
+            if delivery.sent_at is not None:
+                continue
 
         try:
             send_email_message(

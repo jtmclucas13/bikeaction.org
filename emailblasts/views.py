@@ -70,7 +70,7 @@ def email_blast_list(request):
 def email_draft(request, draft_id=None):
     draft = None
     if draft_id is not None:
-        draft = get_object_or_404(EmailBlast, id=draft_id, submitter=request.user)
+        draft = get_object_or_404(EmailBlast, id=draft_id)
     is_read_only = draft is not None and draft.status not in MUTABLE_EMAIL_BLAST_STATUSES
 
     if request.method == "POST":

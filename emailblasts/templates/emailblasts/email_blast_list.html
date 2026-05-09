@@ -124,11 +124,7 @@
                 {% if show_all %}<td>{{ blast.submitter.email|default:"-" }}</td>{% endif %}
                 <td class="email-blast-meta">{{ blast.updated_at }}</td>
                 <td>
-                  {% if blast.submitter_id == request.user.id %}
-                    <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "Edit" %}</a>
-                  {% else %}
-                    <span class="email-blast-meta">-</span>
-                  {% endif %}
+                  <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "Edit" %}</a>
                 </td>
               </tr>
             {% endfor %}
@@ -170,10 +166,10 @@
                 {% if show_all %}<td>{{ blast.submitter.email|default:"-" }}</td>{% endif %}
                 <td class="email-blast-meta">{{ blast.updated_at }}</td>
                 <td>
-                  {% if blast.submitter_id == request.user.id %}
+                  {% if blast.status == "submitted" or blast.status == "rejected" %}
                     <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "Edit" %}</a>
                   {% else %}
-                    <span class="email-blast-meta">-</span>
+                    <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "View" %}</a>
                   {% endif %}
                 </td>
               </tr>
@@ -212,11 +208,7 @@
                 {% if show_all %}<td>{{ blast.submitter.email|default:"-" }}</td>{% endif %}
                 <td class="email-blast-meta">{{ blast.updated_at }}</td>
                 <td>
-                  {% if blast.submitter_id == request.user.id %}
-                    <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "View" %}</a>
-                  {% else %}
-                    <span class="email-blast-meta">{% translate "Imported" %}</span>
-                  {% endif %}
+                  <a href="{% url 'email_draft_edit' draft_id=blast.id %}">{% translate "View" %}</a>
                 </td>
               </tr>
             {% endfor %}

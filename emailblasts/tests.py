@@ -131,6 +131,25 @@ class EmailBlastSendTaskTests(TestCase):
         blast.refresh_from_db()
         self.assertEqual(blast.status, EmailBlast.Status.SENT)
 
+    @patch("emailblasts.tasks.send_email_message")
+    def test_retry_sends_existing_unsent_delivery(self, mock_send_email):
+        profile = self.create_profile("reserved@example.com", first_name="Reserved")
+        blast = self.create_all_profiles_blast()
+        EmailBlastDelivery.objects.create(
+            email_blast=blast,
+            profile=profile,
+            email="reserved@example.com",
+            sent_at=None,
+        )
+
+        send_email_blast(blast.id)
+
+        mock_send_email.assert_called_once()
+        delivery = EmailBlastDelivery.objects.get(email_blast=blast, email="reserved@example.com")
+        self.assertIsNotNone(delivery.sent_at)
+        blast.refresh_from_db()
+        self.assertEqual(blast.status, EmailBlast.Status.SENT)
+
 
 class EmailBlastTargetingTests(TestCase):
     def create_profile(self, email, longitude, latitude):
