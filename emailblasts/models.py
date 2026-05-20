@@ -19,6 +19,7 @@ class EmailBlastTargetNode(models.Model):
         ALL_PROFILES = "all_profiles", "All profiles"
         DISTRICT = "district", "District"
         RCO = "rco", "Registered Community Organization"
+        ZIP_CODE = "zip_code", "Zip Code"
         WARD = "ward", "Ward"
         DIVISION = "division", "Division"
         GEOJSON = "geojson", "GeoJSON boundary"

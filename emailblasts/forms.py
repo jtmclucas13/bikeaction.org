@@ -10,7 +10,7 @@ from campaigns.models import Petition
 from emailblasts.models import EmailBlastTargetNode
 from emailblasts.utils import email_blast_full_body
 from events.models import ScheduledEvent
-from facets.models import District, Division, RegisteredCommunityOrganization, Ward
+from facets.models import District, Division, RegisteredCommunityOrganization, Ward, ZipCode
 from pbaabp.email import template_from_string
 
 
@@ -18,6 +18,7 @@ class EmailDraftForm(forms.Form):
     TARGET_FIELD_BY_TYPE = {
         EmailBlastTargetNode.TargetType.DISTRICT: "district",
         EmailBlastTargetNode.TargetType.RCO: "rco",
+        EmailBlastTargetNode.TargetType.ZIP_CODE: "zip_code",
         EmailBlastTargetNode.TargetType.WARD: "ward",
         EmailBlastTargetNode.TargetType.DIVISION: "division",
         EmailBlastTargetNode.TargetType.GEOJSON: "geojson",
@@ -27,6 +28,7 @@ class EmailDraftForm(forms.Form):
     MODEL_BY_TARGET_FIELD = {
         "district": District,
         "rco": RegisteredCommunityOrganization,
+        "zip_code": ZipCode,
         "ward": Ward,
         "division": Division,
         "petition": Petition,
@@ -99,6 +101,7 @@ class EmailDraftForm(forms.Form):
             "rco": self._model_choices(
                 RegisteredCommunityOrganization.objects.all(), key=lambda facet: facet.name
             ),
+            "zip_code": self._model_choices(ZipCode.objects.all(), key=lambda facet: facet.name),
             "ward": self._model_choices(Ward.objects.all(), key=self._facet_number),
             "division": self._model_choices(
                 Division.objects.select_related("ward"), key=self._division_sort_key

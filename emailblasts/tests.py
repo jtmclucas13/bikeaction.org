@@ -30,7 +30,7 @@ from emailblasts.views import (
     _email_draft_target_name,
 )
 from events.models import EventSignIn, ScheduledEvent
-from facets.models import District
+from facets.models import District, ZipCode
 from pbaabp.email import render_email_html, send_email_message
 from profiles.models import DoNotEmail, Profile
 
@@ -278,6 +278,12 @@ class EmailBlastTargetingTests(TestCase):
         return Profile.objects.create(user=user, location=Point(longitude, latitude, srid=4326))
 
     def create_district(self, name, min_x, min_y, max_x, max_y):
+        return self.create_facet(District, name, min_x, min_y, max_x, max_y)
+
+    def create_zip_code(self, name, min_x, min_y, max_x, max_y):
+        return self.create_facet(ZipCode, name, min_x, min_y, max_x, max_y)
+
+    def create_facet(self, model, name, min_x, min_y, max_x, max_y):
         polygon = Polygon(
             (
                 (min_x, min_y),
@@ -288,7 +294,7 @@ class EmailBlastTargetingTests(TestCase):
             ),
             srid=4326,
         )
-        return District.objects.create(
+        return model.objects.create(
             name=name,
             mpoly=MultiPolygon(polygon, srid=4326),
             properties={},
@@ -393,6 +399,20 @@ class EmailBlastTargetingTests(TestCase):
         profiles = _email_draft_profiles_for_targets(targets)
 
         self.assertCountEqual(profiles, [first, second])
+
+    def test_zip_code_target_matches_profiles_inside_zip_code_facet(self):
+        inside = self.create_profile("inside@example.com", 0.5, 0.5)
+        self.create_profile("outside@example.com", 2.5, 2.5)
+        zip_code = self.create_zip_code("19125", 0, 0, 2, 2)
+        target = self.target_data(
+            EmailBlastTargetNode.TargetType.ZIP_CODE,
+            zip_code.pk,
+            str(zip_code),
+        )
+
+        profiles = _email_draft_profiles_for_targets([target])
+
+        self.assertCountEqual(profiles, [inside])
 
     def test_petition_target_matches_profiles_by_signer_email(self):
         signer = self.create_profile("signer@example.com", 0, 0)
