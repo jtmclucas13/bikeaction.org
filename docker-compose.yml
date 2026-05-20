@@ -1,5 +1,6 @@
 volumes:
   lazer:
+  pgdata:
 
 services:
   postgres:
@@ -7,6 +8,7 @@ services:
     build:
       context: compose
       dockerfile: Dockerfile.postgis
+    pull_policy: build
     ports:
       - "5433:5432"
     environment:
@@ -14,6 +16,8 @@ services:
       POSTGRES_PASSWORD: pbaabp
       POSTGRES_DB: pbaabp
       POSTGRES_HOST_AUTH_METHOD: trust  # never do this in production!
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "pbaabp", "-d", "pbaabp"]
       interval: 1s
@@ -31,6 +35,8 @@ services:
       context: .
       target: dev
     image: pbaabp:docker-compose
+    pull_policy: build
+    command: ["bash", "-c", "exit 0"]
     environment: &base_environment
       DEBUG: "True"
       DATABASE_URL: postgresql://pbaabp:pbaabp@postgres:5432/pbaabp
@@ -45,6 +51,7 @@ services:
 
   web:
     image: pbaabp:docker-compose
+    pull_policy: never
     command: uv run python manage.py runserver 0.0.0.0:8000
     environment: *base_environment
     volumes:
@@ -53,6 +60,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      base:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       postgres:
@@ -69,11 +78,14 @@ services:
 
   worker:
     image: pbaabp:docker-compose
+    pull_policy: never
     command: uv run hupper -m celery -A pbaabp worker --beat -l DEBUG
     environment: *base_environment
     volumes:
       - *base_volumes
     depends_on:
+      base:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       postgres:
@@ -81,12 +93,15 @@ services:
 
   discord:
     image: pbaabp:docker-compose
+    pull_policy: never
     command: python manage.py run_dev_discord
     environment: *base_environment
     volumes:
       - *base_volumes
     stop_signal: SIGINT
     depends_on:
+      base:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       postgres:
