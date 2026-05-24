@@ -67,6 +67,20 @@ def build_project_lead_cheat_sheet_dm_message(
     return msg
 
 
+def build_project_archive_message(guild_id, archived_by, board_role_mention):
+    return (
+        f"This project has been marked complete by {archived_by}, "
+        "and archived.\n\n"
+        f"{board_role_mention} please update the project information in "
+        f"https://discord.com/channels/{guild_id}/{settings.PROJECT_LOG_CHANNEL_ID}, "
+        "leave a :white_check_mark: when complete."
+    )
+
+
+def get_project_archive_mention_role_id():
+    return settings.BOARD_ROLE_ID or settings.NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID
+
+
 async def _add_new_project_message_and_thread(project_application_id):
     application = await ProjectApplication.objects.filter(id=project_application_id).afirst()
     if application is None or application.draft or application.thread_id:
@@ -268,13 +282,14 @@ async def _archive_project(project_application_id):
     channel = None
     if application.channel_id:
         channel = await guild.fetch_channel(application.channel_id)
-        mention_role = await guild.fetch_role(settings.NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID)
+        archive_mention_role_id = get_project_archive_mention_role_id()
+        archive_mention_role = await guild.fetch_role(archive_mention_role_id)
         await channel.send(
-            f"This project has been marked complete by {application.archived_by}, "
-            "and archived.\n\n"
-            f"{mention_role.mention} please update the project information in "
-            f"https://discord.com/channels/{guild.id}/{settings.PROJECT_LOG_CHANNEL_ID}, "
-            "leave a :white_check_mark: when complete."
+            build_project_archive_message(
+                guild.id,
+                application.archived_by,
+                archive_mention_role.mention,
+            )
         )
         await bot.http.move_channel(
             guild_id=guild.id,
