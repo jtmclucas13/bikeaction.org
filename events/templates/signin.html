@@ -18,6 +18,21 @@ Do not show the footer on signin page.
   <p>{% translate "Sign in to let us know a little more about you!" %}</p>
 </div>
 <div class="form-container">
+  {% if quick_signin_identity %}
+  <form method="post" class="quick-signin-form">
+    {% csrf_token %}
+    <div class="button-holder">
+      <p class="quick-signin-greeting">
+        Hello {{ quick_signin_identity.first_name }}, would you like to sign in?
+      </p>
+      <button class="submit-button" type="submit" name="quick_signin" value="1">
+        {% translate "Sign me in!" %}
+      </button>
+    </div>
+  </form>
+  <hr>
+  {% endif %}
+
   <form method="post">
   {% csrf_token %}
 
