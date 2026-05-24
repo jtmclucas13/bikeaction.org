@@ -1,3 +1,5 @@
+import logging
+
 from asgiref.sync import async_to_sync, sync_to_async
 from celery import shared_task
 from django.conf import settings
@@ -6,6 +8,63 @@ from interactions.models.discord.enums import AutoArchiveDuration
 
 from pba_discord.bot import bot
 from projects.models import ProjectApplication
+
+logger = logging.getLogger(__name__)
+
+
+def get_project_lead_cheat_sheet_link_text():
+    if not settings.PROJECT_LEAD_CHEAT_SHEET_URL:
+        return None
+    return f"[Project Lead Cheat Sheet](<{settings.PROJECT_LEAD_CHEAT_SHEET_URL}>)"
+
+
+def get_project_lead_cheat_sheet_sentence():
+    link_text = get_project_lead_cheat_sheet_link_text()
+    if not link_text:
+        return None
+    return (
+        "ℹ️ For the basics on PBA resources, reimbursements, promotion, events, "
+        "volunteer support, and wrapping up your project, read the "
+        f"{link_text}."
+    )
+
+
+def build_project_approved_channel_message(
+    guild_id,
+    application_thread_id,
+    project_lead_mention,
+    mentor_mention=None,
+):
+    msg = (
+        "✅ This project has been approved!\n\n"
+        "Project Application: "
+        f"https://discord.com/channels/{guild_id}/{application_thread_id}\n\n"
+        f"Project Lead: {project_lead_mention}."
+    )
+    cheat_sheet_sentence = get_project_lead_cheat_sheet_sentence()
+    if cheat_sheet_sentence:
+        msg += f"\n\n{cheat_sheet_sentence}"
+    if mentor_mention:
+        msg += (
+            f" {mentor_mention} has volunteered to support this project by answering any questions."
+        )
+    return msg
+
+
+def build_project_lead_cheat_sheet_dm_message(
+    project_name,
+    mentor_mention=None,
+):
+    msg = f'✅ Your project "{project_name}" has been approved!'
+    cheat_sheet_sentence = get_project_lead_cheat_sheet_sentence()
+    if cheat_sheet_sentence:
+        msg += f"\n\n{cheat_sheet_sentence}"
+    if mentor_mention:
+        msg += (
+            f"\n\n{mentor_mention} has volunteered to support this project "
+            "by answering any questions."
+        )
+    return msg
 
 
 async def _add_new_project_message_and_thread(project_application_id):
@@ -116,6 +175,13 @@ async def _approve_new_project(
             application.nay_votes = [u.id for u in users]
 
     actions = []
+    project_name = application.data["shortname"]["value"]
+    project_lead = await guild.fetch_member(project_lead_id)
+    mentor = None
+    mentor_mention = None
+    if project_mentor_id is not None:
+        mentor = await guild.fetch_member(project_mentor_id)
+        mentor_mention = mentor.mention
 
     if project_channel_name is not None:
         channel = await guild.create_text_channel(
@@ -124,34 +190,51 @@ async def _approve_new_project(
         application.channel_id = channel.id
         actions.append(f"Created channel https://discord.com/channels/{guild.id}/{channel.id}")
 
-        project_lead = await guild.fetch_member(project_lead_id)
-        msg = (
-            "This project has been approved!\n\n"
-            "Project Application: "
-            f"https://discord.com/channels/{guild.id}/{application.thread_id}\n\n"
-            f"Project Lead is {project_lead.mention}."
+        msg = build_project_approved_channel_message(
+            guild.id,
+            application.thread_id,
+            project_lead.mention,
+            mentor_mention,
         )
-        if project_mentor_id:
-            mentor = await guild.fetch_member(project_mentor_id)
-            msg += (
-                f" {mentor.mention} has volunteered to support this project "
-                "by answering any questions."
-            )
         message = await channel.send(msg)
-        await message.pin()
+        try:
+            await message.pin()
+        except Exception:
+            logger.exception(
+                "Failed to pin approval message for project application %s",
+                application.id,
+            )
+            actions.append("Could not pin approval message; please pin it manually")
 
     if project_mentor_id is not None:
         application.mentor_id = project_mentor_id
-        mentor = await guild.fetch_member(project_mentor_id)
         actions.append(f"Assigned Mentor {mentor.mention}")
 
     role = await guild.fetch_role(settings.ACTIVE_PROJECT_LEAD_ROLE_ID)
-    project_lead = await guild.fetch_member(project_lead_id)
     application.project_lead_id = project_lead.id
     await project_lead.add_role(role)
     actions.append(f"Assigned {role.name} role to {project_lead.mention}")
 
-    msg = f'Project "{application.data["shortname"]["value"]}" Approved!'
+    if project_channel_name is None:
+        try:
+            await project_lead.send(
+                build_project_lead_cheat_sheet_dm_message(
+                    project_name,
+                    mentor_mention,
+                )
+            )
+            actions.append(f"Sent Project Lead Cheat Sheet to {project_lead.mention}")
+        except Exception:
+            logger.exception(
+                "Failed to DM Project Lead Cheat Sheet for project application %s",
+                application.id,
+            )
+            actions.append(
+                "Could not DM Project Lead Cheat Sheet to "
+                f"{project_lead.mention}; please send it manually"
+            )
+
+    msg = f'Project "{project_name}" Approved!'
     if actions:
         msg += "\n\nActions Taken:\n"
     for action in actions:
@@ -159,9 +242,7 @@ async def _approve_new_project(
 
     await discussion_thread.send(msg)
 
-    msg = (
-        f'Project "{application.data["shortname"]["value"]}" Approved by {application.approved_by}.'
-    )
+    msg = f'Project "{project_name}" Approved by {application.approved_by}.'
     if actions:
         msg += "\n\nActions Taken:\n"
     for action in actions:
