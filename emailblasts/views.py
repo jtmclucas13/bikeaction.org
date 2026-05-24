@@ -26,13 +26,18 @@ from pbaabp.email import (
 )
 from profiles.models import Profile
 
-EMAIL_PREVIEW_CONTEXT = {
+_EMAIL_PREVIEW_CONTEXT = {
     "first_name": "Sam",
     "last_name": "Cyclist",
     "name": "Sam Cyclist",
     "email": "sam@example.com",
     "target_description": "match the selected audience",
 }
+
+
+def email_preview_context(**overrides):
+    return {**_EMAIL_PREVIEW_CONTEXT, **overrides}
+
 
 MUTABLE_EMAIL_BLAST_STATUSES = {
     EmailBlast.Status.DRAFT,
@@ -167,7 +172,7 @@ def _render_email_draft(request, form, draft, is_read_only, target_rows):
             "form": form,
             "draft": draft,
             "is_read_only": is_read_only,
-            "preview_context": EMAIL_PREVIEW_CONTEXT,
+            "preview_context": email_preview_context(),
             "target_choice_groups": form.target_choices,
             "target_rows": target_rows,
             "target_type_choices": form.target_type_choices(),
@@ -267,10 +272,7 @@ def email_draft_preview(request):
     preview_html = ""
     if body:
         target_description = request.POST.get("target_description", "")
-        preview_context = {
-            **EMAIL_PREVIEW_CONTEXT,
-            "target_description": target_description,
-        }
+        preview_context = email_preview_context(target_description=target_description)
         full_body = email_blast_full_body(body, target_description)
         try:
             rendered_body = template_from_string(full_body).render(preview_context)
