@@ -1,5 +1,13 @@
-from django.test import SimpleTestCase, override_settings
+from allauth.socialaccount.models import SocialAccount
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
+from organizers.forms import OrganizerApplicationForm
+from organizers.models import OrganizerApplication
+from profiles.models import Profile
+from projects.forms import ProjectApplicationForm
+from projects.models import ProjectApplication
 from projects.tasks import (
     build_project_archive_message,
     build_project_approved_channel_message,
@@ -121,3 +129,121 @@ class ProjectArchiveMessageTests(SimpleTestCase):
             "https://discord.com/channels/guild-123/project-log-123",
             message,
         )
+
+
+class DraftApplicationProfileTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="draftuser",
+            email="draft@example.com",
+            password="password",
+            first_name="Draft",
+            last_name="User",
+        )
+        self.profile = Profile.objects.create(
+            user=self.user,
+            street_address="123 Market St",
+            zip_code="19107",
+        )
+        SocialAccount.objects.create(
+            user=self.user,
+            provider="discord",
+            uid="discord-draftuser",
+            extra_data={"username": "draftuser"},
+        )
+        self.client.force_login(self.user)
+
+    def project_data(self, shortname="Project Draft"):
+        form = ProjectApplicationForm()
+        data = {
+            field.name: {"label": field.label, "value": f"{field.name} value"} for field in form
+        }
+        data["shortname"]["value"] = shortname
+        data["quick_summary"]["value"] = "A draft project summary"
+        return data
+
+    def organizer_data(self):
+        form = OrganizerApplicationForm()
+        return {
+            field.name: {"label": field.label, "value": f"{field.name} value"} for field in form
+        }
+
+    def test_profile_links_project_and_organizer_drafts_to_their_own_forms(self):
+        project_draft = ProjectApplication.objects.create(
+            submitter=self.user,
+            draft=True,
+            data=self.project_data(),
+        )
+        organizer_draft = OrganizerApplication.objects.create(
+            submitter=self.user,
+            draft=True,
+            data=self.organizer_data(),
+        )
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertContains(response, "Project Application Drafts")
+        self.assertContains(response, "Organizer Application Drafts")
+        self.assertContains(
+            response,
+            reverse("project_application_edit", kwargs={"pk": project_draft.id}),
+        )
+        self.assertContains(
+            response,
+            reverse("organizer_application_edit", kwargs={"pk": organizer_draft.id}),
+        )
+        self.assertContains(
+            response,
+            reverse("project_application_delete", kwargs={"pk": project_draft.id}),
+        )
+        self.assertContains(
+            response,
+            reverse("organizer_application_delete", kwargs={"pk": organizer_draft.id}),
+        )
+
+    def test_project_draft_can_be_deleted_from_profile(self):
+        project_draft = ProjectApplication.objects.create(
+            submitter=self.user,
+            draft=True,
+            data=self.project_data(),
+        )
+
+        response = self.client.post(
+            reverse("project_application_delete", kwargs={"pk": project_draft.id})
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        self.assertFalse(ProjectApplication.objects.filter(id=project_draft.id).exists())
+
+    def test_organizer_draft_can_be_deleted_from_profile(self):
+        organizer_draft = OrganizerApplication.objects.create(
+            submitter=self.user,
+            draft=True,
+            data=self.organizer_data(),
+        )
+
+        response = self.client.post(
+            reverse("organizer_application_delete", kwargs={"pk": organizer_draft.id})
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        self.assertFalse(OrganizerApplication.objects.filter(id=organizer_draft.id).exists())
+
+    def test_other_users_drafts_cannot_be_deleted(self):
+        other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="password",
+        )
+        other_draft = ProjectApplication.objects.create(
+            submitter=other_user,
+            draft=True,
+            data=self.project_data("Other Project Draft"),
+        )
+
+        response = self.client.post(
+            reverse("project_application_delete", kwargs={"pk": other_draft.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(ProjectApplication.objects.filter(id=other_draft.id).exists())

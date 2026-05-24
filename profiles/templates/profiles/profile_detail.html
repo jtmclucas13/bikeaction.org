@@ -379,7 +379,13 @@
         <tr>
           <td>{{ application.data.shortname.value }}</td>
           <td>{{ application.data.quick_summary.value|truncatechars:64 }}</td>
-          <td><a href="{% url 'project_application_edit' pk=application.id %}">Edit/Submit</a></td>
+          <td>
+            <a class="smol-button" href="{% url 'project_application_edit' pk=application.id %}">Edit/Submit</a>
+            <form class="table-action-form" method="post" action="{% url 'project_application_delete' pk=application.id %}">
+              {% csrf_token %}
+              <button class="smol-button danger" type="submit">Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
     </table>
@@ -413,7 +419,7 @@
 {% if request.user.profile.organizer_application_draft %}
 <hr>
 <div class="form-header">
-  <h2>Project Application Drafts</h2>
+  <h2>Organizer Application Drafts</h2>
   <div class="table-container">
     <table>
         <tr>
@@ -425,7 +431,13 @@
         <tr>
           <td>{{ submission.updated_at|date }}</td>
           <td>Draft</td>
-          <td><a href="{% url 'organizer_application_edit' pk=submission.id %}">Edit/Submit</a></td>
+          <td>
+            <a class="smol-button" href="{% url 'organizer_application_edit' pk=submission.id %}">Edit/Submit</a>
+            <form class="table-action-form" method="post" action="{% url 'organizer_application_delete' pk=submission.id %}">
+              {% csrf_token %}
+              <button class="smol-button danger" type="submit">Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
     </table>

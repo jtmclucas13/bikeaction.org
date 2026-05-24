@@ -11,6 +11,11 @@ urlpatterns = [
     ),
     path("application/<pk>/edit/", views.organizer_application, name="organizer_application_edit"),
     path(
+        "application/<pk>/delete/",
+        views.organizer_application_delete,
+        name="organizer_application_delete",
+    ),
+    path(
         "application/<pk>/view/",
         views.organizer_application_view,
         name="organizer_application_view",
