@@ -1,5 +1,6 @@
 import datetime
 
+import sesame.utils
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -184,3 +185,18 @@ class EventSignInRememberedIdentityTests(TestCase):
 
         self.assertEqual(response.cookies[EVENT_SIGNIN_COOKIE_NAME].value, "")
         self.assertEqual(response.cookies[EVENT_SIGNIN_COOKIE_NAME]["max-age"], 0)
+
+    def test_login_sets_user_signin_cookie(self):
+        user = User.objects.create_user(
+            username="grace",
+            email="grace@example.com",
+            password="password",
+            first_name="Grace",
+            last_name="Hopper",
+        )
+
+        response = self.client.get(reverse("sesame_login") + sesame.utils.get_query_string(user))
+
+        self.assertEqual(response.status_code, 302)
+        payload = decrypt_event_signin_payload(response.cookies[EVENT_SIGNIN_COOKIE_NAME].value)
+        self.assertEqual(payload, {"type": EVENT_SIGNIN_COOKIE_TYPE_USER, "id": user.id})
