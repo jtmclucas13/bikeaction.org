@@ -678,6 +678,17 @@ form.application-form .form-errors {
   padding: 1em;
 }
 
+.quick-signin-form .button-holder {
+  padding-top: 1.5em;
+}
+
+.quick-signin-greeting {
+  font-size: 1.6em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1em;
+}
+
 /* CSS */
 .submit-button, .secondary-button {
   appearance: button;
