@@ -95,7 +95,13 @@ def email_draft(request, draft_id=None):
             action = request.POST.get("action")
             if action == "send_example":
                 try:
-                    _send_email_blast_example(form, request.user)
+                    _send_email_blast_example(
+                        subject=form.cleaned_data["subject"],
+                        body=form.cleaned_data["body"],
+                        target_description=form.cleaned_data["target_description"],
+                        reply_to=form.cleaned_data["reply_to"],
+                        user=request.user,
+                    )
                     messages.success(request, f"Sent a test email to {request.user.email}.")
                 except ValueError as error:
                     messages.error(request, str(error))
@@ -180,14 +186,11 @@ def _render_email_draft(request, form, draft, is_read_only, target_rows):
     )
 
 
-def _send_email_blast_example(form, user):
+def _send_email_blast_example(subject, body, target_description, reply_to, user):
     if not user.email:
         raise ValueError("User does not have an email address.")
 
-    body = email_blast_full_body(
-        form.cleaned_data["body"],
-        form.cleaned_data["target_description"],
-    )
+    full_body = email_blast_full_body(body, target_description)
     send_email_message(
         template_name=None,
         from_=settings.DEFAULT_FROM_EMAIL,
@@ -197,11 +200,11 @@ def _send_email_blast_example(form, user):
             "last_name": user.last_name,
             "name": user.get_full_name(),
             "email": user.email,
-            "target_description": form.cleaned_data["target_description"],
+            "target_description": target_description,
         },
-        subject=f"[TEST] {form.cleaned_data['subject']}",
-        message=body,
-        reply_to=[form.cleaned_data["reply_to"]],
+        subject=f"[TEST] {subject}",
+        message=full_body,
+        reply_to=[reply_to],
     )
 
 
