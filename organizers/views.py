@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from organizers.forms import OrganizerApplicationForm
 from organizers.models import OrganizerApplication
@@ -64,14 +65,16 @@ def organizer_application(request, pk=None):
         return redirect("profile")
 
     if pk:
-        application = get_object_or_404(OrganizerApplication, id=pk)
+        application = get_object_or_404(OrganizerApplication, id=pk, submitter=request.user)
         if not application.draft:
             return redirect("organizer_application_view", pk=application.id)
 
     if request.method == "POST" and "save-draft" in request.POST:
         form = OrganizerApplicationForm(request.POST, label_suffix="")
         if pk:
-            application = get_object_or_404(OrganizerApplication, id=pk)
+            application = get_object_or_404(
+                OrganizerApplication, id=pk, submitter=request.user, draft=True
+            )
         else:
             application = OrganizerApplication(submitter=request.user, draft=True)
         application.data = form.to_json()
@@ -99,7 +102,9 @@ def organizer_application(request, pk=None):
 
     else:
         if pk:
-            application = get_object_or_404(OrganizerApplication, id=pk)
+            application = get_object_or_404(
+                OrganizerApplication, id=pk, submitter=request.user, draft=True
+            )
             form = OrganizerApplicationForm(
                 initial={k: v["value"] for k, v in application.data.items()},
                 label_suffix="",
@@ -108,3 +113,12 @@ def organizer_application(request, pk=None):
             form = OrganizerApplicationForm(label_suffix="")
 
     return render(request, "organizer_application.html", {"form": form})
+
+
+@login_required
+@require_POST
+def organizer_application_delete(request, pk):
+    application = get_object_or_404(OrganizerApplication, id=pk, submitter=request.user, draft=True)
+    application.delete()
+    messages.add_message(request, messages.SUCCESS, "Organizer application draft deleted.")
+    return redirect("profile")

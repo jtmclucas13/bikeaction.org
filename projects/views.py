@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404, redirect, render
 
 from projects.forms import ProjectApplicationForm
@@ -50,14 +51,16 @@ def project_application(request, pk=None):
         return redirect("profile")
 
     if pk:
-        application = get_object_or_404(ProjectApplication, id=pk)
+        application = get_object_or_404(ProjectApplication, id=pk, submitter=request.user)
         if not application.draft:
             return redirect("project_application_view", pk=application.id)
 
     if request.method == "POST" and "save-draft" in request.POST:
         form = ProjectApplicationForm(request.POST, label_suffix="")
         if pk:
-            application = get_object_or_404(ProjectApplication, id=pk)
+            application = get_object_or_404(
+                ProjectApplication, id=pk, submitter=request.user, draft=True
+            )
         else:
             application = ProjectApplication(submitter=request.user, draft=True)
         application.data = form.to_json()
@@ -85,7 +88,9 @@ def project_application(request, pk=None):
 
     else:
         if pk:
-            application = get_object_or_404(ProjectApplication, id=pk)
+            application = get_object_or_404(
+                ProjectApplication, id=pk, submitter=request.user, draft=True
+            )
             form = ProjectApplicationForm(
                 initial={k: v["value"] for k, v in application.data.items()}, label_suffix=""
             )
@@ -93,3 +98,12 @@ def project_application(request, pk=None):
             form = ProjectApplicationForm(label_suffix="")
 
     return render(request, "project_application_form.html", {"form": form})
+
+
+@login_required
+@require_POST
+def project_application_delete(request, pk):
+    application = get_object_or_404(ProjectApplication, id=pk, submitter=request.user, draft=True)
+    application.delete()
+    messages.add_message(request, messages.SUCCESS, "Project application draft deleted.")
+    return redirect("profile")
