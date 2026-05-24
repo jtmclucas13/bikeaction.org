@@ -1,8 +1,10 @@
 from django.test import SimpleTestCase, override_settings
 
 from projects.tasks import (
+    build_project_archive_message,
     build_project_approved_channel_message,
     build_project_lead_cheat_sheet_dm_message,
+    get_project_archive_mention_role_id,
 )
 
 
@@ -86,5 +88,36 @@ class ProjectApprovalMessageTests(SimpleTestCase):
 
         self.assertIn(
             "<@101> has volunteered to support this project by answering any questions.",
+            message,
+        )
+
+
+class ProjectArchiveMessageTests(SimpleTestCase):
+    @override_settings(BOARD_ROLE_ID="board-role-123")
+    def test_archive_mention_role_prefers_board_role_id(self):
+        self.assertEqual(get_project_archive_mention_role_id(), "board-role-123")
+
+    @override_settings(
+        BOARD_ROLE_ID=None,
+        NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID="project-review-role-123",
+    )
+    def test_archive_mention_role_falls_back_to_project_review_role(self):
+        self.assertEqual(get_project_archive_mention_role_id(), "project-review-role-123")
+
+    @override_settings(PROJECT_LOG_CHANNEL_ID="project-log-123")
+    def test_archive_message_mentions_board_role(self):
+        message = build_project_archive_message(
+            guild_id="guild-123",
+            archived_by="Archive User",
+            board_role_mention="<@&board-role-456>",
+        )
+
+        self.assertIn("This project has been marked complete by Archive User", message)
+        self.assertIn(
+            "<@&board-role-456> please update the project information",
+            message,
+        )
+        self.assertIn(
+            "https://discord.com/channels/guild-123/project-log-123",
             message,
         )
