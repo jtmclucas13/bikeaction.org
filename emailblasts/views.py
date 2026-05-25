@@ -227,14 +227,16 @@ def _draft_preview_context(draft):
     if draft.target:
         target_count = _email_draft_target_count(_email_blast_target_profiles(draft.target))
         target_name = draft.target.name
-        target_geojson = _email_draft_geojson_feature_collection([
-            {
-                "target_type": node.primitive_type,
-                "target_name": node.primitive_name,
-                "target_geojson": node.primitive_geojson,
-            }
-            for node in _target_primitive_nodes(draft.target)
-        ])
+        target_geojson = _email_draft_geojson_feature_collection(
+            [
+                {
+                    "target_type": node.primitive_type,
+                    "target_name": node.primitive_name,
+                    "target_geojson": node.primitive_geojson,
+                }
+                for node in _target_primitive_nodes(draft.target)
+            ]
+        )
     return _build_preview_context(
         subject=draft.subject or "",
         body=draft.body,
