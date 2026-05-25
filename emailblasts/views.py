@@ -170,6 +170,36 @@ def email_draft(request, draft_id=None):
     )
 
 
+def _build_preview_context(
+    *, subject, body, target_description, target_count, target_name, target_geojson
+):
+    prefix = getattr(settings, "EMAIL_SUBJECT_PREFIX", "")
+    if prefix and subject:
+        subject = f"{prefix} {subject}".strip()
+
+    preview_html = ""
+    preview_errors = []
+    if body:
+        full_body = email_blast_full_body(body, target_description)
+        try:
+            rendered = template_from_string(full_body).render(
+                email_preview_context(target_description=target_description)
+            )
+            preview_html = render_email_html(rendered, for_preview=True)
+        except Exception as error:
+            preview_errors.append(f"Template error: {error}")
+
+    return {
+        "preview_subject": subject,
+        "preview_html": preview_html,
+        "target_count": target_count,
+        "has_target_count": target_count is not None,
+        "target_name": target_name,
+        "target_geojson": target_geojson,
+        "target_errors": preview_errors,
+    }
+
+
 def _render_email_draft(request, form, draft, is_read_only, target_rows):
     return render(
         request,
@@ -261,48 +291,22 @@ def _email_draft_target_rows_from_post(post_data):
 @login_required
 @permission_required("profiles.can_organize", raise_exception=True)
 def email_draft_preview(request):
-    subject = request.POST.get("subject", "")
-    body = request.POST.get("body", "")
-    target_count = None
-    target_name = ""
-    target_errors = []
-    target_geojson = ""
-    preview_errors = []
-
-    if hasattr(settings, "EMAIL_SUBJECT_PREFIX") and subject:
-        subject = f"{settings.EMAIL_SUBJECT_PREFIX} {subject}"
-
-    preview_html = ""
-    if body:
-        target_description = request.POST.get("target_description", "")
-        preview_context = email_preview_context(target_description=target_description)
-        full_body = email_blast_full_body(body, target_description)
-        try:
-            rendered_body = template_from_string(full_body).render(preview_context)
-            preview_html = render_email_html(rendered_body, for_preview=True)
-        except Exception as error:
-            preview_errors.append(f"Fix the template syntax before submitting: {error}")
-
     target_queryset, target_name, target_errors, target_geojson = _email_draft_target_from_post(
         request.POST
     )
-    target_errors = [*preview_errors, *target_errors]
-    if target_queryset is not None:
-        target_count = _email_draft_target_count(target_queryset)
-
-    return render(
-        request,
-        "emailblasts/email_draft_preview.html",
-        {
-            "preview_subject": subject,
-            "preview_html": preview_html,
-            "target_count": target_count,
-            "has_target_count": target_count is not None,
-            "target_name": target_name,
-            "target_errors": target_errors,
-            "target_geojson": target_geojson,
-        },
+    target_count = (
+        _email_draft_target_count(target_queryset) if target_queryset is not None else None
     )
+    context = _build_preview_context(
+        subject=request.POST.get("subject", ""),
+        body=request.POST.get("body", ""),
+        target_description=request.POST.get("target_description", ""),
+        target_count=target_count,
+        target_name=target_name,
+        target_geojson=target_geojson,
+    )
+    context["target_errors"] = [*context["target_errors"], *target_errors]
+    return render(request, "emailblasts/email_draft_preview.html", context)
 
 
 @login_required
