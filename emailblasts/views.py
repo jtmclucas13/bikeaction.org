@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db import transaction
+from django.core.exceptions import PermissionDenied
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -83,15 +84,19 @@ def email_blast_list(request):
 @login_required
 @permission_required("profiles.can_organize", raise_exception=True)
 def email_draft(request, draft_id=None):
-    draft = None
-    if draft_id is not None:
-        draft = get_object_or_404(EmailBlast, id=draft_id)
-    is_read_only = draft is not None and draft.status not in MUTABLE_EMAIL_BLAST_STATUSES
+    draft = get_object_or_404(EmailBlast, id=draft_id) if draft_id else None
+
+    if draft and draft.submitter != request.user:
+        if request.method == "POST":
+            raise PermissionDenied
+        return redirect("email_draft_review", draft_id=draft.id)
+
+    if draft and draft.status not in MUTABLE_EMAIL_BLAST_STATUSES:
+        if request.method == "POST":
+            messages.error(request, "This email blast can no longer be edited.")
+        return redirect("email_draft_review", draft_id=draft.id)
 
     if request.method == "POST":
-        if is_read_only:
-            messages.error(request, "Sent or approved email blasts cannot be edited.")
-            return redirect("email_draft_edit", draft_id=draft.id)
         form = EmailDraftForm(request.POST)
         if form.is_valid():
             action = request.POST.get("action")
@@ -112,7 +117,6 @@ def email_draft(request, draft_id=None):
                     request,
                     form=form,
                     draft=draft,
-                    is_read_only=is_read_only,
                     target_rows=target_rows,
                 )
 
@@ -145,19 +149,12 @@ def email_draft(request, draft_id=None):
                 request,
                 f"{message} for {target_name} ({target_count} targeted profiles).",
             )
-            return redirect("email_draft_edit", draft_id=draft.id)
+            if action == "save_draft":
+                return redirect("email_draft_edit", draft_id=draft.id)
+            return redirect("email_draft_review", draft_id=draft.id)
         target_rows = _email_draft_target_rows_from_post(request.POST)
     elif draft is not None:
         form = EmailDraftForm(initial=_email_draft_initial(draft))
-        if is_read_only:
-            for field_name in (
-                "subject",
-                "reply_to",
-                "target_name",
-                "target_description",
-                "body",
-            ):
-                form.fields[field_name].widget.attrs["readonly"] = "readonly"
         target_rows = _email_draft_initial_target_rows(draft)
     else:
         form = EmailDraftForm()
@@ -167,7 +164,6 @@ def email_draft(request, draft_id=None):
         request,
         form=form,
         draft=draft,
-        is_read_only=is_read_only,
         target_rows=target_rows,
     )
 
@@ -279,14 +275,13 @@ def _build_preview_context(
     }
 
 
-def _render_email_draft(request, form, draft, is_read_only, target_rows):
+def _render_email_draft(request, form, draft, target_rows):
     return render(
         request,
         "emailblasts/email_draft.html",
         {
             "form": form,
             "draft": draft,
-            "is_read_only": is_read_only,
             "preview_context": email_preview_context(),
             "target_choice_groups": form.target_choices,
             "target_rows": target_rows,
