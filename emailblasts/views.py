@@ -5,6 +5,7 @@ import re
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db import transaction
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -17,6 +18,7 @@ from emailblasts.targeting import (
     _email_draft_target_profiles,
     _target_primitive_nodes,
 )
+from emailblasts.tasks import send_email_blast
 from emailblasts.utils import email_blast_full_body
 from pbaabp.email import (
     EMAIL_IMAGE_PATH,
@@ -167,6 +169,83 @@ def email_draft(request, draft_id=None):
         draft=draft,
         is_read_only=is_read_only,
         target_rows=target_rows,
+    )
+
+
+@login_required
+@permission_required("profiles.can_organize", raise_exception=True)
+def email_draft_review(request, draft_id):
+    draft = get_object_or_404(EmailBlast, id=draft_id)
+    is_author = request.user == draft.submitter
+    is_mutable = draft.status in MUTABLE_EMAIL_BLAST_STATUSES
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "send_example" and (is_author or request.user.is_staff):
+            try:
+                _send_email_blast_example(
+                    subject=draft.subject,
+                    body=draft.body,
+                    target_description=draft.target.description if draft.target else "",
+                    reply_to=draft.reply_to,
+                    user=request.user,
+                )
+                messages.success(request, f"Sent a test email to {request.user.email}.")
+            except ValueError as error:
+                messages.error(request, str(error))
+        elif request.user.is_staff:
+            if action == "approve" and draft.status == EmailBlast.Status.SUBMITTED:
+                draft.status = EmailBlast.Status.APPROVED
+                draft.save(update_fields=["status", "updated_at"])
+                messages.success(request, "Email blast approved.")
+            elif action == "reject" and draft.status in (
+                EmailBlast.Status.SUBMITTED,
+                EmailBlast.Status.APPROVED,
+            ):
+                draft.status = EmailBlast.Status.REJECTED
+                draft.save(update_fields=["status", "updated_at"])
+                messages.success(request, "Email blast rejected.")
+            elif action == "send" and draft.status == EmailBlast.Status.APPROVED:
+                transaction.on_commit(lambda: send_email_blast.delay(draft.id))
+                messages.success(request, "Email blast queued to send.")
+        return redirect("email_draft_review", draft_id=draft.id)
+
+    return render(
+        request,
+        "emailblasts/email_draft_review.html",
+        {
+            "draft": draft,
+            "is_author": is_author,
+            "is_mutable": is_mutable,
+            "is_staff": request.user.is_staff,
+            **_draft_preview_context(draft),
+        },
+    )
+
+
+def _draft_preview_context(draft):
+    target_description = draft.target.description if draft.target else ""
+    target_count = None
+    target_name = ""
+    target_geojson = ""
+    if draft.target:
+        target_count = _email_draft_target_count(_email_blast_target_profiles(draft.target))
+        target_name = draft.target.name
+        target_geojson = _email_draft_geojson_feature_collection([
+            {
+                "target_type": node.primitive_type,
+                "target_name": node.primitive_name,
+                "target_geojson": node.primitive_geojson,
+            }
+            for node in _target_primitive_nodes(draft.target)
+        ])
+    return _build_preview_context(
+        subject=draft.subject or "",
+        body=draft.body,
+        target_description=target_description,
+        target_count=target_count,
+        target_name=target_name,
+        target_geojson=target_geojson,
     )
 
 
