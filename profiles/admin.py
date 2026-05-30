@@ -3,7 +3,9 @@ import datetime
 from collections import defaultdict
 from io import BytesIO
 
+from admin_extra_buttons.api import ExtraButtonsMixin, button
 from django.contrib import admin
+from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
@@ -20,6 +22,7 @@ from facets.models import District, RegisteredCommunityOrganization
 from membership.models import Membership
 from pbaabp.admin import OrganizerPerms, ReadOnlyLeafletGeoAdminMixin, organizer_admin
 from profiles.models import DiscordActivity, DoNotEmail, Profile, ShirtOrder
+from profiles.tasks import add_user_to_connected_role
 
 
 class DistrictOrganizerFilter(admin.SimpleListFilter):
@@ -313,7 +316,7 @@ class OrganizesDistrictInline(admin.TabularInline):
     extra = 0
 
 
-class ProfileAdmin(ReadOnlyLeafletGeoAdminMixin, admin.ModelAdmin):
+class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelAdmin):
     list_display = [
         "_name",
         "_user",
@@ -349,6 +352,56 @@ class ProfileAdmin(ReadOnlyLeafletGeoAdminMixin, admin.ModelAdmin):
     ]
     inlines = [OrganizesDistrictInline]
     autocomplete_fields = ("user",)
+    actions = ["resync_apps_connected"]
+
+    def _enqueue_connected_role_sync(self, profile):
+        discord = profile.discord
+        if discord is None:
+            return False
+
+        add_user_to_connected_role.delay(discord.uid)
+        return True
+
+    @admin.action(description="Re-sync apps connected")
+    def resync_apps_connected(self, request, queryset):
+        queued_count = 0
+        skipped_count = 0
+
+        for profile in queryset.select_related("user"):
+            if self._enqueue_connected_role_sync(profile):
+                queued_count += 1
+            else:
+                skipped_count += 1
+
+        if queued_count:
+            self.message_user(
+                request,
+                f"{queued_count} profile{'s' if queued_count != 1 else ''} queued for "
+                "apps connected re-sync.",
+            )
+        if skipped_count:
+            self.message_user(
+                request,
+                f"{skipped_count} profile{'s' if skipped_count != 1 else ''} skipped; "
+                "no Discord account is connected.",
+                level=messages.WARNING,
+            )
+
+    @button(label="Re-sync apps connected", change_form=True)
+    def resync_apps_connected_button(self, request, object_id):
+        profile = self.get_object(request, object_id)
+        if profile is None:
+            self.message_user(request, "Profile not found.", level=messages.ERROR)
+            return
+
+        if self._enqueue_connected_role_sync(profile):
+            self.message_user(request, "Profile queued for apps connected re-sync.")
+        else:
+            self.message_user(
+                request,
+                "Profile skipped; no Discord account is connected.",
+                level=messages.WARNING,
+            )
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
