@@ -364,7 +364,7 @@ class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelA
     ]
     inlines = [OrganizesDistrictInline]
     autocomplete_fields = ("user",)
-    actions = ["resync_apps_connected"]
+    actions = [heatmap, resync_apps_connected]
 
     def _enqueue_connected_role_sync(self, profile):
         discord = profile.discord
