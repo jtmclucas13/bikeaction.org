@@ -18,6 +18,7 @@ from email_log.models import Email
 from reportlab.lib.units import inch as rl_inch
 from reportlab.pdfgen import canvas
 
+from campaigns.admin import randomize_lat_long
 from facets.models import District, RegisteredCommunityOrganization
 from membership.models import Membership
 from pbaabp.admin import OrganizerPerms, ReadOnlyLeafletGeoAdminMixin, organizer_admin
@@ -314,6 +315,17 @@ class OrganizesDistrictInline(admin.TabularInline):
     verbose_name = "District"
     verbose_name_plural = "Districts Organized"
     extra = 0
+
+
+def heatmap(modeladmin, request, queryset):
+    pins = []
+    for profile in queryset:
+        if profile.location:
+            lat, lng = randomize_lat_long(
+                profile.id, profile.location.y, profile.location.x
+            )
+            pins.append([lat, lng, 1])
+    return render(request, "petition/heatmap.html", {"pins_json": json.dumps(pins)})
 
 
 class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelAdmin):
