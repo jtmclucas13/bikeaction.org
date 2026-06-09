@@ -205,6 +205,18 @@ class EmailBlastImageTests(TestCase):
 
         self.assertIn("/media/emailblasts/images/banner.png", html)
 
+    @patch("pbaabp.email.default_storage.url")
+    def test_preview_uses_storage_url_for_uploaded_media_image_paths(self, mock_storage_url):
+        mock_storage_url.return_value = "https://media.example.com/emailblasts/images/banner.png"
+
+        html = render_email_html(
+            "![Banner](media/emailblasts/images/banner.png)",
+            for_preview=True,
+        )
+
+        mock_storage_url.assert_called_once_with("emailblasts/images/banner.png")
+        self.assertIn("https://media.example.com/emailblasts/images/banner.png", html)
+
     def test_send_email_inlines_uploaded_media_image_from_storage(self):
         image = SimpleUploadedFile(
             "banner.gif",
@@ -228,6 +240,70 @@ class EmailBlastImageTests(TestCase):
         )
 
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_send_email_inlines_uploaded_media_image_with_media_url_path(self):
+        image = SimpleUploadedFile(
+            "banner.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff,\x00\x00"
+            b"\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        email_image = EmailBlastImage.objects.create(
+            created_by=self.user,
+            image=image,
+            original_filename="banner.gif",
+        )
+
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="Image test",
+            message=f"![Banner](/media/{email_image.image.name})",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+
+    @patch("pbaabp.email.default_storage.url")
+    def test_send_email_inlines_uploaded_media_image_with_storage_url(self, mock_storage_url):
+        mock_storage_url.return_value = "https://media.example.com/"
+        image = SimpleUploadedFile(
+            "banner.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff,\x00\x00"
+            b"\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        email_image = EmailBlastImage.objects.create(
+            created_by=self.user,
+            image=image,
+            original_filename="banner.gif",
+        )
+
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="Image test",
+            message=f"![Banner](https://media.example.com/{email_image.image.name})",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_send_email_leaves_external_https_images_remote(self):
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="External image test",
+            message="![Remote](https://example.com/banner.png)",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertIn("https://example.com/banner.png", html)
 
 
 class EmailBlastExampleSendTests(TestCase):
