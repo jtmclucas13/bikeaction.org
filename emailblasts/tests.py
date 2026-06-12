@@ -1,10 +1,11 @@
 import json
 import shutil
 import tempfile
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import Permission
 from django.contrib.auth.models import User
+from django.contrib import messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core import mail
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
@@ -13,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from campaigns.models import Petition, PetitionSignature
+from emailblasts.admin import send_selected_email_blasts
 from emailblasts.forms import EmailDraftForm
 from emailblasts.models import (
     EmailBlast,
@@ -157,6 +159,58 @@ class EmailBlastSendTaskTests(TestCase):
         self.assertIsNotNone(delivery.sent_at)
         blast.refresh_from_db()
         self.assertEqual(blast.status, EmailBlast.Status.SENT)
+
+
+class EmailBlastAdminActionTests(TestCase):
+    def create_blast(self, subject, status):
+        return EmailBlast.objects.create(
+            subject=subject,
+            body="Main message",
+            reply_to="organizer@bikeaction.org",
+            status=status,
+        )
+
+    @patch("emailblasts.admin.send_email_blast.delay")
+    def test_send_selected_email_blasts_queues_approved_blasts(self, mock_delay):
+        blast = self.create_blast("Approved blast", EmailBlast.Status.APPROVED)
+        modeladmin = Mock()
+        request = Mock()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            send_selected_email_blasts(
+                modeladmin,
+                request,
+                EmailBlast.objects.filter(id=blast.id),
+            )
+
+        mock_delay.assert_called_once_with(blast.id)
+        modeladmin.message_user.assert_called_once_with(
+            request,
+            "1 email blast queued to send.",
+        )
+
+    @patch("emailblasts.admin.send_email_blast.delay")
+    def test_send_selected_email_blasts_blocks_unapproved_blasts(self, mock_delay):
+        approved_blast = self.create_blast("Approved blast", EmailBlast.Status.APPROVED)
+        submitted_blast = self.create_blast("Submitted blast", EmailBlast.Status.SUBMITTED)
+        modeladmin = Mock()
+        request = Mock()
+
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            send_selected_email_blasts(
+                modeladmin,
+                request,
+                EmailBlast.objects.filter(id__in=[approved_blast.id, submitted_blast.id]),
+            )
+
+        self.assertEqual(callbacks, [])
+        mock_delay.assert_not_called()
+        modeladmin.message_user.assert_called_once_with(
+            request,
+            "1 email blast not queued; this action can only be used when all selected "
+            "blasts are approved.",
+            level=messages.ERROR,
+        )
 
 
 class EmailBlastImageTests(TestCase):

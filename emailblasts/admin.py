@@ -42,10 +42,17 @@ def mark_as_rejected(modeladmin, request, queryset):
 
 @admin.action(description="Send selected approved email blasts")
 def send_selected_email_blasts(modeladmin, request, queryset):
-    approved_blast_ids = list(
-        queryset.filter(status=EmailBlast.Status.APPROVED).values_list("id", flat=True)
-    )
-    skipped_count = queryset.exclude(status=EmailBlast.Status.APPROVED).count()
+    unapproved_count = queryset.exclude(status=EmailBlast.Status.APPROVED).count()
+    if unapproved_count:
+        modeladmin.message_user(
+            request,
+            f"{unapproved_count} email blast{'s' if unapproved_count != 1 else ''} "
+            "not queued; this action can only be used when all selected blasts are approved.",
+            level=messages.ERROR,
+        )
+        return
+
+    approved_blast_ids = list(queryset.values_list("id", flat=True))
 
     for blast_id in approved_blast_ids:
         transaction.on_commit(lambda blast_id=blast_id: send_email_blast.delay(blast_id))
@@ -55,13 +62,6 @@ def send_selected_email_blasts(modeladmin, request, queryset):
             request,
             f"{len(approved_blast_ids)} email blast"
             f"{'s' if len(approved_blast_ids) != 1 else ''} queued to send.",
-        )
-    if skipped_count:
-        modeladmin.message_user(
-            request,
-            f"{skipped_count} email blast{'s' if skipped_count != 1 else ''} skipped; "
-            "only approved blasts can be sent.",
-            level=messages.WARNING,
         )
 
 
@@ -141,7 +141,7 @@ class EmailBlastAdmin(admin.ModelAdmin):
         "submitter__first_name",
         "submitter__last_name",
     )
-    readonly_fields = ("submitter", "created_at", "updated_at")
+    readonly_fields = ("submitter", "created_at", "updated_at", "status")
     inlines = (EmailBlastImageInline, EmailBlastDeliveryInline)
     actions = (
         mark_as_draft,
