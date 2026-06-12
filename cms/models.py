@@ -229,10 +229,9 @@ class ContentButtonBlock(StructBlock):
 
     text = CharBlock()
     url = LinkBlock()
-    color = ChoiceBlock(
-        choices=[("pink", "Pink"), ("green", "Green")],
-        default="pink",
-    )
+    # Note: Should color choice be supported? Submit button class does not have choices.
+    # Note: Should this also support being disabled? What about secondary-button? 
+    #        See .submit-button:disabled, .secondary-button in /static/css/pba.css
     width = ChoiceBlock(
         choices=[("full", "Full"), ("half", "Half")],
         default="full",
@@ -247,10 +246,13 @@ class ContentButtonBlock(StructBlock):
     )
 
     # Unsure if button or text centering
+    # Todo: fix default
     alignment = ChoiceBlock(
+        required=False,
         choices=[("center", "Center")],
-        default="",
     )
+    class Meta:
+        template = "blocks/button_block.html"
 
 
 class CmsStreamPage(Page):
@@ -265,7 +267,7 @@ class CmsStreamPage(Page):
             ("newsletter_signup", NewsletterSignupBlock()),
             ("display_card_block", DisplayCardsBlock()),
             ("collapsible_header", CollapsibleHeader()),
-            ("content-button-block", CollapsibleHeader()),
+            ("content_button_block", ContentButtonBlock()),
         ],
         use_json_field=True,
     )
