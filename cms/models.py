@@ -323,6 +323,7 @@ class PostPage(Page):
             ("html", RawHTMLBlock()),
             ("table", TableBlock(table_options=table_options)),
             ("newsletter_signup", NewsletterSignupBlock()),
+            ("content_button_block", ContentButtonBlock())
         ],
         use_json_field=True,
     )
