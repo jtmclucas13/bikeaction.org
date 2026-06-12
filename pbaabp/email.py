@@ -2,6 +2,7 @@ import mimetypes
 import os
 from email.mime.image import MIMEImage
 from email.utils import make_msgid
+from urllib.parse import unquote, urlsplit
 
 import markdown
 import pynliner
@@ -123,25 +124,62 @@ def render_email_html(message, for_preview=False):
             if src.startswith(EMAIL_IMAGE_PATH):
                 filename = os.path.basename(src)
                 img["src"] = f"/email-draft/image/{filename}"
-            elif src.startswith("media/"):
-                img["src"] = f"{settings.MEDIA_URL}{src.removeprefix('media/')}"
+            else:
+                storage_path = _storage_path_from_media_src(src)
+                if storage_path:
+                    img["src"] = default_storage.url(storage_path)
 
     return _inline_css_and_wrap(soup)
 
 
-def attach_inline_image(mail, src):
+def _storage_path_from_media_src(src):
+    src = src.strip()
     if src.startswith("media/"):
-        path = src.removeprefix("media/")
-        content_type, _ = mimetypes.guess_type(path)
+        return src.removeprefix("media/")
+
+    media_url = settings.MEDIA_URL
+    if media_url and src.startswith(media_url):
+        return src.removeprefix(media_url).lstrip("/")
+
+    try:
+        storage_url = default_storage.url("")
+    except Exception:
+        storage_url = ""
+
+    for base_url in (media_url, storage_url):
+        if not base_url:
+            continue
+
+        parsed_base = urlsplit(base_url)
+        parsed_src = urlsplit(src)
+        if not parsed_base.scheme or not parsed_base.netloc:
+            continue
+        if parsed_src.scheme != parsed_base.scheme or parsed_src.netloc != parsed_base.netloc:
+            continue
+        if not parsed_src.path.startswith(parsed_base.path):
+            continue
+
+        return unquote(parsed_src.path.removeprefix(parsed_base.path).lstrip("/"))
+
+    return None
+
+
+def attach_inline_image(mail, src):
+    storage_path = _storage_path_from_media_src(src)
+    if storage_path:
+        content_type, _ = mimetypes.guess_type(storage_path)
         subtype = content_type.split("/", 1)[1] if content_type else None
-        with default_storage.open(path, "rb") as image_file:
+        with default_storage.open(storage_path, "rb") as image_file:
             image = MIMEImage(image_file.read(), _subtype=subtype)
 
         cid = make_msgid()[1:-1]
         image.add_header("Content-ID", f"<{cid}>")
-        image.add_header("Content-Disposition", "inline", filename=os.path.basename(path))
+        image.add_header("Content-Disposition", "inline", filename=os.path.basename(storage_path))
         mail.attach(image)
         return cid
+
+    if urlsplit(src).scheme in ("http", "https"):
+        return None
 
     return attach_inline_image_file(mail, src)
 
@@ -231,7 +269,8 @@ def send_email_message(
 
     for img in soup.findAll("img"):
         cid = attach_inline_image(mail, img["src"])
-        img["src"] = "cid:" + cid
+        if cid:
+            img["src"] = "cid:" + cid
 
     html = _inline_css_and_wrap(soup)
     mail.attach_alternative(html, "text/html")

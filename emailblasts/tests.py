@@ -1,10 +1,11 @@
 import json
 import shutil
 import tempfile
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import Permission
 from django.contrib.auth.models import User
+from django.contrib import messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core import mail
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
@@ -13,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from campaigns.models import Petition, PetitionSignature
+from emailblasts.admin import send_selected_email_blasts
 from emailblasts.forms import EmailDraftForm
 from emailblasts.models import (
     EmailBlast,
@@ -159,6 +161,58 @@ class EmailBlastSendTaskTests(TestCase):
         self.assertEqual(blast.status, EmailBlast.Status.SENT)
 
 
+class EmailBlastAdminActionTests(TestCase):
+    def create_blast(self, subject, status):
+        return EmailBlast.objects.create(
+            subject=subject,
+            body="Main message",
+            reply_to="organizer@bikeaction.org",
+            status=status,
+        )
+
+    @patch("emailblasts.admin.send_email_blast.delay")
+    def test_send_selected_email_blasts_queues_approved_blasts(self, mock_delay):
+        blast = self.create_blast("Approved blast", EmailBlast.Status.APPROVED)
+        modeladmin = Mock()
+        request = Mock()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            send_selected_email_blasts(
+                modeladmin,
+                request,
+                EmailBlast.objects.filter(id=blast.id),
+            )
+
+        mock_delay.assert_called_once_with(blast.id)
+        modeladmin.message_user.assert_called_once_with(
+            request,
+            "1 email blast queued to send.",
+        )
+
+    @patch("emailblasts.admin.send_email_blast.delay")
+    def test_send_selected_email_blasts_blocks_unapproved_blasts(self, mock_delay):
+        approved_blast = self.create_blast("Approved blast", EmailBlast.Status.APPROVED)
+        submitted_blast = self.create_blast("Submitted blast", EmailBlast.Status.SUBMITTED)
+        modeladmin = Mock()
+        request = Mock()
+
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            send_selected_email_blasts(
+                modeladmin,
+                request,
+                EmailBlast.objects.filter(id__in=[approved_blast.id, submitted_blast.id]),
+            )
+
+        self.assertEqual(callbacks, [])
+        mock_delay.assert_not_called()
+        modeladmin.message_user.assert_called_once_with(
+            request,
+            "1 email blast not queued; this action can only be used when all selected "
+            "blasts are approved.",
+            level=messages.ERROR,
+        )
+
+
 class EmailBlastImageTests(TestCase):
     def setUp(self):
         self.media_root = tempfile.mkdtemp()
@@ -205,6 +259,18 @@ class EmailBlastImageTests(TestCase):
 
         self.assertIn("/media/emailblasts/images/banner.png", html)
 
+    @patch("pbaabp.email.default_storage.url")
+    def test_preview_uses_storage_url_for_uploaded_media_image_paths(self, mock_storage_url):
+        mock_storage_url.return_value = "https://media.example.com/emailblasts/images/banner.png"
+
+        html = render_email_html(
+            "![Banner](media/emailblasts/images/banner.png)",
+            for_preview=True,
+        )
+
+        mock_storage_url.assert_called_once_with("emailblasts/images/banner.png")
+        self.assertIn("https://media.example.com/emailblasts/images/banner.png", html)
+
     def test_send_email_inlines_uploaded_media_image_from_storage(self):
         image = SimpleUploadedFile(
             "banner.gif",
@@ -228,6 +294,70 @@ class EmailBlastImageTests(TestCase):
         )
 
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_send_email_inlines_uploaded_media_image_with_media_url_path(self):
+        image = SimpleUploadedFile(
+            "banner.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff,\x00\x00"
+            b"\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        email_image = EmailBlastImage.objects.create(
+            created_by=self.user,
+            image=image,
+            original_filename="banner.gif",
+        )
+
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="Image test",
+            message=f"![Banner](/media/{email_image.image.name})",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+
+    @patch("pbaabp.email.default_storage.url")
+    def test_send_email_inlines_uploaded_media_image_with_storage_url(self, mock_storage_url):
+        mock_storage_url.return_value = "https://media.example.com/"
+        image = SimpleUploadedFile(
+            "banner.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff,\x00\x00"
+            b"\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        email_image = EmailBlastImage.objects.create(
+            created_by=self.user,
+            image=image,
+            original_filename="banner.gif",
+        )
+
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="Image test",
+            message=f"![Banner](https://media.example.com/{email_image.image.name})",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_send_email_leaves_external_https_images_remote(self):
+        send_email_message(
+            template_name=None,
+            from_=None,
+            to=["organizer@example.com"],
+            context={},
+            subject="External image test",
+            message="![Remote](https://example.com/banner.png)",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertIn("https://example.com/banner.png", html)
 
 
 class EmailBlastExampleSendTests(TestCase):
