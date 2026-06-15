@@ -242,8 +242,6 @@ class ContentButtonBlock(StructBlock):
         ),
     )
 
-    # Unsure if button or text centering
-    # Todo: fix default
     alignment = ChoiceBlock(
         required=False,
         choices=[("center", "Center")],
