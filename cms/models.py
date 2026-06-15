@@ -229,9 +229,6 @@ class ContentButtonBlock(StructBlock):
 
     text = CharBlock()
     url = LinkBlock()
-    # Note: Should color choice be supported? Submit button class does not have choices.
-    # Note: Should this also support being disabled? What about secondary-button? 
-    #        See .submit-button:disabled, .secondary-button in /static/css/pba.css
     width = ChoiceBlock(
         choices=[("full", "Full"), ("half", "Half")],
         default="full",
