@@ -32,7 +32,7 @@
       {% if event.cover %}
       <div class="event-cover"><img src="{{ event.cover }}"></div>
       {% endif %}
-      <div class="event-description">{{ event.description|truncatechars:"300"|markdownify }}</div>
+      <div class="event-description">{{ event.description|truncatechars:"300"|markdownify:"event_list" }}</div>
     </div>
   </div>
   {% endfor %}

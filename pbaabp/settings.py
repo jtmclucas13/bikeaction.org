@@ -516,12 +516,25 @@ MARKDOWNIFY = {
             "h3",
             "h4",
             "h5",
+            "img",
         ],
+        "WHITELIST_ATTRS": {
+            "a": ["href", "title"],
+            "img": ["alt", "src", "title"],
+        },
         "MARKDOWN_EXTENSIONS": [
             "extra",
             "nl2br",
         ],
     }
+}
+
+MARKDOWNIFY["event_list"] = {
+    **MARKDOWNIFY["default"],
+    "WHITELIST_TAGS": [tag for tag in MARKDOWNIFY["default"]["WHITELIST_TAGS"] if tag != "img"],
+    "WHITELIST_ATTRS": {
+        "a": ["href", "title"],
+    },
 }
 
 LOGGING = {
