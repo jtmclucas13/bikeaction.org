@@ -95,6 +95,10 @@ make clean
 
 Will completely destroy your local containers.
 
+### Discord Bot Development
+
+See [pba_discord/README.md](pba_discord/README.md) for further instructions on how to test the Discord bot locally.
+
 ## Deployment
 
 Deployments to [apps.bikeaction.org](https://apps.bikeaction.org) occur on merge to `main` branch.
