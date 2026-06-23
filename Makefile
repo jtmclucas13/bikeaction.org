@@ -81,3 +81,6 @@ clean:
 	rm -f .state/docker-build-base
 	rm -f .state/db-initialized
 	rm -f .state/db-migrated
+
+setup-discord:
+	docker compose run --rm web uv run python manage.py setup_discord
