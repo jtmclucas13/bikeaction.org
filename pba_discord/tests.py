@@ -13,8 +13,6 @@ class SetupDiscordCommandTest(TestCase):
         def mocked_getenv(key):
             env_vars = {
                 "DISCORD_BOT_TOKEN": "some_bot_token",
-                "DISCORD_OAUTH_CLIENT_ID": "some_client_id",
-                "DISCORD_OAUTH_CLIENT_SECRET": "some_client_secret",
             }
             return env_vars.get(key)
 
@@ -29,8 +27,6 @@ class SetupDiscordCommandTest(TestCase):
                 self.assertIn("NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID", output)
                 self.assertIn("NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID", output)
                 self.assertIn("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID", output)
-                self.assertNotIn("DISCORD_OAUTH_CLIENT_ID", output)
-                self.assertNotIn("DISCORD_OAUTH_CLIENT_SECRET", output)
 
     def test_user_aborts_setup(self):
         """
@@ -38,8 +34,7 @@ class SetupDiscordCommandTest(TestCase):
         """
         def mocked_getenv(key):
             env_vars = {
-                "DISCORD_OAUTH_CLIENT_ID": "some_client_id",
-                "DISCORD_OAUTH_CLIENT_SECRET": "some_client_secret",
+                "DISCORD_BOT_TOKEN": "some_bot_token",
                 "NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID": "123",
                 "NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID": "456",
                 "NEW_PROJECT_REVIEW_DISCORD_GUILD_ID": "789",
@@ -63,8 +58,6 @@ class SetupDiscordCommandTest(TestCase):
         def mocked_getenv(key):
             env_vars = {
                 "DISCORD_BOT_TOKEN": "some_bot_token",
-                "DISCORD_OAUTH_CLIENT_ID": "some_client_id",
-                "DISCORD_OAUTH_CLIENT_SECRET": "some_client_secret",
                 "NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID": "123",
                 "NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID": "456",
                 "NEW_PROJECT_REVIEW_DISCORD_GUILD_ID": "789",
