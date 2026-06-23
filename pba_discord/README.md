@@ -1,6 +1,6 @@
 # About
 
-This directory contains the code that sets up our Discord bot.
+This directory contains the code that sets up our Discord integration.
 
 ## Local development
 
@@ -15,6 +15,9 @@ The [interactions.py](https://interactions-py.github.io/interactions.py/Guides/0
 1. Give your app a name.
 1. Go to the "Installation" tab.
 1. Set "Install Link" to "None". This is required to make your bot private.
+1. Go to the "OAuth2" tab.
+1. In your local `.env` file, set `DISCORD_OAUTH_CLIENT_ID` to the Client ID and `DISCORD_OAUTH_CLIENT_SECRET` to the Client Secret (you may need to click "Reset Secret"to view it). You will need to restart your local environment to set these environment variables inside the app container.
+1. Under "Redirects", add `http://localhost:8000/accounts/discord/login/callback/`.
 
 ### Create a Bot
 
@@ -43,4 +46,6 @@ The [interactions.py](https://interactions-py.github.io/interactions.py/Guides/0
 1. In your local `.env` file, set `DISCORD_BOT_TOKEN` to the bot token that you grabbed earlier.
 1. Run `docker compose up discord` to restart the Docker container that runs the bot, this time with your token.
 
-The bot should now be able to use commands, listen to messages, and interact with local Django admin! Test it by running `/neighborhood` in your server, then going to Django admin and finding the request in the Neighborhoods page. 
+The bot should now be able to use commands, listen to messages, and interact with local Django admin! Test it by running `/neighborhood` in your server, then going to Django admin and finding the request in the Neighborhoods page.
+
+You can also now connect profiles to Discord accounts with an OAuth connection to your test app.
