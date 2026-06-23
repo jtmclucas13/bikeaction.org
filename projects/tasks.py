@@ -11,6 +11,8 @@ from projects.models import ProjectApplication
 
 logger = logging.getLogger(__name__)
 
+REIMBURSEMENT_FORM_URL = "https://forms.gle/tex8Pm7j1dSad6Xu9"
+
 
 def get_project_lead_cheat_sheet_link_text():
     if not settings.PROJECT_LEAD_CHEAT_SHEET_URL:
@@ -39,7 +41,8 @@ def build_project_approved_channel_message(
         "✅ This project has been approved!\n\n"
         "Project Application: "
         f"https://discord.com/channels/{guild_id}/{application_thread_id}\n\n"
-        f"Project Lead: {project_lead_mention}."
+        f"Project Lead: {project_lead_mention}.\n\n"
+        f"Need to be reimbursed for an approved project expense? Fill out this form: {REIMBURSEMENT_FORM_URL}\n\n"
     )
     cheat_sheet_sentence = get_project_lead_cheat_sheet_sentence()
     if cheat_sheet_sentence:
