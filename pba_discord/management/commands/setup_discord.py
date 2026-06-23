@@ -34,6 +34,22 @@ def create_guild_channel(guild_id: str, channel_name: str, auth_token: str, is_c
     except requests.exceptions.RequestException as e:
         print(f"Error creating guild channel: {e}")
         return None
+    
+def create_guild_role(guild_id: str, role_name: str, auth_token: str) -> str | None:
+    """
+    Creates a role in a Discord guild.
+    """
+    try:
+        response = requests.post(
+            f"{DISCORD_API_BASE_URL}/guilds/{guild_id}/roles",
+            headers={"Authorization": f"Bot {auth_token}", "Content-Type": "application/json"},
+            json={"name": role_name}
+        )
+        response.raise_for_status()
+        return response.json().get("id")
+    except requests.exceptions.RequestException as e:
+        print(f"Error creating guild role: {e}")
+        return None
 
 class Command(BaseCommand):
     help = "Sets up the user's Discord environment for development."
@@ -108,16 +124,26 @@ class Command(BaseCommand):
             category_id=projects_category_id
         )
 
-        # create Organizer role (project reviewer)
-        # create Project Lead role
+        # create Project-related roles
+        organizer_role_id = create_guild_role(
+            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"),
+            "Organizer",
+            auth_token
+        )
+        project_lead_role_id = create_guild_role(
+            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"),
+            "Project Lead",
+            auth_token
+        )
+
         self.stdout.write(self.style.SUCCESS("Channels and roles successfully created! Add the following to your .env file:"))
         self.stdout.write(f"ACTIVE_PROJECT_CATEGORY_ID={projects_category_id}")
         self.stdout.write(f"NEW_PROJECT_REVIEW_DISCORD_CHANNEL_ID={project_review_channel_id}")
         self.stdout.write(f"NEW_PROJECT_REVIEW_DISCORD_VOTE_CHANNEL_ID={project_vote_channel_id}")
         self.stdout.write(f"PROJECT_LOG_CHANNEL_ID={project_log_channel_id}")
-        self.stdout.write(f"NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID={project_review_channel_id}")
-        self.stdout.write(f"NEW_PROJECT_REVIEW_DISCORD_ROLE_VOTE_MENTION_ID={project_review_channel_id}")
-        self.stdout.write(f"ACTIVE_PROJECT_LEAD_ROLE_ID={project_review_channel_id}")
+        self.stdout.write(f"NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID={organizer_role_id}")
+        self.stdout.write(f"NEW_PROJECT_REVIEW_DISCORD_ROLE_VOTE_MENTION_ID={organizer_role_id}")
+        self.stdout.write(f"ACTIVE_PROJECT_LEAD_ROLE_ID={project_lead_role_id}")
 
         self.stdout.write("Done!")
 

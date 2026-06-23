@@ -28,7 +28,8 @@ class SetupDiscordCommandTest(TestCase):
                 self.assertIn("NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID", output)
                 self.assertIn("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID", output)
 
-    def test_user_aborts_setup(self):
+    @patch('requests.get')                                                                                                                                                                           
+    def test_user_aborts_setup(self, mock_get):
         """
         Verify that entering 'n' during the confirmation prompt aborts the setup.
         """
@@ -41,6 +42,9 @@ class SetupDiscordCommandTest(TestCase):
             }
             return env_vars.get(key)
 
+        mock_get.return_value.json.return_value = {"name": "Test Guild"}                                                                                                                             
+        mock_get.return_value.raise_for_status.return_value = None
+
         with patch('os.getenv', side_effect=mocked_getenv):
             with patch('builtins.input', return_value='n'):
                 stdout = io.StringIO()
@@ -50,7 +54,9 @@ class SetupDiscordCommandTest(TestCase):
                 self.assertIn("Setup aborted by user.", output)
                 self.assertNotIn("Starting Discord setup...", output)
 
-    def test_setup_completes_successfully(self):
+    @patch('requests.get')                                                                                                                                                                           
+    @patch('requests.post')
+    def test_setup_completes_successfully(self, mock_post, mock_get):
         """
         Verify that the setup_discord command completes successfully when all 
         environment variables are present and the user confirms.
@@ -64,6 +70,12 @@ class SetupDiscordCommandTest(TestCase):
             }
             return env_vars.get(key)
 
+        mock_channel_id = "new_channel_id"
+        mock_get.return_value.json.return_value = {"name": "Test Guild"}                                                                                                                             
+        mock_get.return_value.raise_for_status.return_value = None                                                                                                                                   
+        mock_post.return_value.json.return_value = {"id": mock_channel_id}                                                                                                                          
+        mock_post.return_value.raise_for_status.return_value = None                                                                                                                                                                                                                                                                                                                                          
+
         with patch('os.getenv', side_effect=mocked_getenv):
             with patch('builtins.input', return_value='y'):
                 stdout = io.StringIO()
@@ -72,4 +84,12 @@ class SetupDiscordCommandTest(TestCase):
 
                 self.assertIn("Environment validation successful.", output)
                 self.assertIn("Starting Discord setup...", output)
+                self.assertIn("Channels and roles successfully created! Add the following to your .env file:", output)
+                self.assertIn(f"ACTIVE_PROJECT_CATEGORY_ID={mock_channel_id}", output)
+                self.assertIn(f"NEW_PROJECT_REVIEW_DISCORD_CHANNEL_ID={mock_channel_id}", output)
+                self.assertIn(f"NEW_PROJECT_REVIEW_DISCORD_VOTE_CHANNEL_ID={mock_channel_id}", output)
+                self.assertIn(f"PROJECT_LOG_CHANNEL_ID={mock_channel_id}", output)
+                self.assertIn(f"NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID={mock_channel_id}", output)
+                self.assertIn(f"NEW_PROJECT_REVIEW_DISCORD_ROLE_VOTE_MENTION_ID={mock_channel_id}", output)
+                self.assertIn(f"ACTIVE_PROJECT_LEAD_ROLE_ID={mock_channel_id}", output)
                 self.assertIn("Done!", output)
