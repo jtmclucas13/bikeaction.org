@@ -1,23 +1,32 @@
 from django.core.management.base import BaseCommand
 import os
-from dotenv import load_dotenv
+import dotenv
 
 class Command(BaseCommand):
     help = "Sets up the user's Discord environment for development."
 
     def handle(self, *args, **options):
-        # Load .env file
-        load_dotenv()
+        dotenv.read_dotenv()
 
-        # Example of reading from .env
-        # discord_token = os.getenv("DISCORD_TOKEN")
-        # if not discord_token:
-        #     self.stdout.write(self.style.ERROR("DISCORD_TOKEN not found in .env"))
-        #     return
+        # Verify environment variables
+        required_vars = [
+            "DISCORD_CLIENT_ID",
+            "DISCORD_CLIENT_SECRET",
+            "NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID",
+            "NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID",
+            "NEW_PROJECT_REVIEW_DISCORD_GUILD_ID",
+        ]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
 
-        self.stdout.write(self.style.SUCCESS("Loading environment from .env..."))
-        
-        # Prompt for confirmation
+        if missing_vars:
+            self.stdout.write(self.style.ERROR(
+                f"Missing required environment variables: {', '.join(missing_vars)}. "
+                "Please set them in your .env file."
+            ))
+            return
+
+        self.stdout.write(self.style.SUCCESS("Environment validation successful."))
+
         response = input("Are you sure you want to run the Discord setup? (y/N): ")
         
         if response.lower() != 'y':
