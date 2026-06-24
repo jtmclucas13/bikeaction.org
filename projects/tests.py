@@ -29,6 +29,10 @@ class ProjectApprovalMessageTests(SimpleTestCase):
         self.assertIn("https://discord.com/channels/guild-123/thread-456", message)
         self.assertIn("Project Lead: <@789>.", message)
         self.assertIn(
+            "Need to be reimbursed for an approved project expense? Fill out this form: https://forms.gle/tex8Pm7j1dSad6Xu9",
+            message,
+        )
+        self.assertIn(
             "ℹ️ For the basics on PBA resources, reimbursements, promotion, events, "
             "volunteer support, and wrapping up your project, read the "
             "[Project Lead Cheat Sheet](<https://example.com/cheat-sheet>).",
@@ -59,6 +63,10 @@ class ProjectApprovalMessageTests(SimpleTestCase):
 
         self.assertIn("✅ This project has been approved!", message)
         self.assertIn("Project Lead: <@789>.", message)
+        self.assertIn(
+            "Need to be reimbursed for an approved project expense? Fill out this form: https://forms.gle/tex8Pm7j1dSad6Xu9",
+            message,
+        )
         self.assertNotIn("Project Lead Cheat Sheet", message)
         self.assertNotIn("For the basics on PBA resources", message)
 
