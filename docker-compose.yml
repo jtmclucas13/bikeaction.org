@@ -94,7 +94,7 @@ services:
   discord:
     image: pbaabp:docker-compose
     pull_policy: never
-    command: python manage.py run_dev_discord
+    command: uv run python manage.py run_dev_discord
     environment: *base_environment
     volumes:
       - *base_volumes
