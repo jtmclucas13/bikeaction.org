@@ -51,12 +51,12 @@ class SetupDiscordCommandTest(TestCase):
             {"name": "Test Guild"},  # organizer_review_guild_name
             {"name": "Test Guild"},  # neighborhood_selection_guild_name
             {"name": "Test Guild"},  # new_project_review_guild_name
-            [],                      # existing_channels (Projects category)
-            [],                      # existing_channels (Project Review)
-            [],                      # existing_channels (Project Voting)
-            [],                      # existing_channels (Project Log)
-            [],                      # existing_roles (Organizer)
-            [],                      # existing_roles (Project Lead)
+            [],  # existing_channels (Projects category)
+            [],  # existing_channels (Project Review)
+            [],  # existing_channels (Project Voting)
+            [],  # existing_channels (Project Log)
+            [],  # existing_roles (Organizer)
+            [],  # existing_roles (Project Lead)
         ]
         mock_get.return_value.raise_for_status.return_value = None
 
@@ -91,12 +91,12 @@ class SetupDiscordCommandTest(TestCase):
             {"name": "Test Guild"},  # organizer_review_guild_name
             {"name": "Test Guild"},  # neighborhood_selection_guild_name
             {"name": "Test Guild"},  # new_project_review_guild_name
-            [],                      # existing_channels (Projects category)
-            [],                      # existing_channels (Project Review)
-            [],                      # existing_channels (Project Voting)
-            [],                      # existing_channels (Project Log)
-            [],                      # existing_roles (Organizer)
-            [],                      # existing_roles (Project Lead)
+            [],  # existing_channels (Projects category)
+            [],  # existing_channels (Project Review)
+            [],  # existing_channels (Project Voting)
+            [],  # existing_channels (Project Log)
+            [],  # existing_roles (Organizer)
+            [],  # existing_roles (Project Lead)
         ]
         mock_get.return_value.raise_for_status.return_value = None
         mock_post.return_value.json.return_value = {"id": mock_channel_id}
