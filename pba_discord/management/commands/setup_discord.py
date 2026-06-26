@@ -1,4 +1,6 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.conf import settings
+
 import os
 import requests
 import dotenv
@@ -91,6 +93,12 @@ class Command(BaseCommand):
     help = "Sets up the user's Discord environment for development."
 
     def handle(self, *args, **options):
+        # Safety check: only allow in DEBUG mode
+        if not settings.DEBUG:
+            raise CommandError(
+                "This command can only be run with DEBUG=True."
+            )
+
         dotenv.read_dotenv()
 
         # Verify environment variables
