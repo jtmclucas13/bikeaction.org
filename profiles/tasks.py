@@ -10,7 +10,7 @@ from pbaabp.integrations.mailjet import Mailjet
 
 async def _add_user_to_connected_role(uid):
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.DISCORD_CONNECTED_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     role = await guild.fetch_role(settings.DISCORD_CONNECTED_ROLE_ID)
     member = await guild.fetch_member(uid)
     await member.add_role(role.id)
@@ -23,7 +23,7 @@ def add_user_to_connected_role(uid):
 
 async def _remove_user_from_connected_role(uid):
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.DISCORD_CONNECTED_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     role = await guild.fetch_role(settings.DISCORD_CONNECTED_ROLE_ID)
     member = await guild.fetch_member(uid)
     await member.remove_role(role.id)

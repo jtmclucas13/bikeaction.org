@@ -15,7 +15,7 @@ async def aupdate_neighborhood_role_and_channel(neighborhood_id):
         return
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     selection_channel = await guild.fetch_channel(
         settings.NEIGHBORHOOD_SELECTION_DISCORD_CHANNEL_ID
     )
@@ -74,7 +74,7 @@ def update_neighborhood_role_and_channel(neighborhood_id):
 
 async def adelete_neighborhood_role_and_channel(discord_role_id, discord_channel_id):
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
 
     if discord_channel_id is not None:
         channel = await guild.fetch_channel(discord_channel_id)

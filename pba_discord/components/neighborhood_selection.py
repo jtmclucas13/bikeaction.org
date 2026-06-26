@@ -91,7 +91,7 @@ class NeighborhoodSelection(Extension):
         if not selection_channel:
             print("No selection channel, bailing!")
 
-        guild = await bot.fetch_guild(settings.NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID)
+        guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
         BUTTONS = []
         for neighborhood in await sync_to_async(list)(
             Neighborhood.objects.filter(approved=True).order_by("-featured", "name")
@@ -156,7 +156,7 @@ class NeighborhoodSelection(Extension):
             await ctx.send("No neighborhood found!", ephemeral=True)
             return
 
-        guild = await self.bot.fetch_guild(settings.NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID)
+        guild = await self.bot.fetch_guild(settings.DISCORD_GUILD_ID)
         role = await guild.fetch_role(neighborhood.discord_role_id)
         if role not in ctx.member.roles:
             await ctx.member.add_role(neighborhood.discord_role_id)

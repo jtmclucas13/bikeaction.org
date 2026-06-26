@@ -14,7 +14,7 @@ async def _add_new_organizer_message_and_thread(organizer_application_id):
         return
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     selection_channel = await guild.fetch_channel(settings.NEW_ORGANIZER_REVIEW_DISCORD_CHANNEL_ID)
     mention_role = await guild.fetch_role(settings.NEW_ORGANIZER_REVIEW_DISCORD_ROLE_MENTION_ID)
     submitter = await sync_to_async(lambda: application.submitter)()

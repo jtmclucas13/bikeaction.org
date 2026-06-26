@@ -18,10 +18,7 @@ def submit_violation_report_to_ppa(violation_id):
 
 
 async def _submit_violation_report_discord(violation_id):
-    if (
-        settings.NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID is None
-        or settings.NEW_LASER_VIOLATION_CHANNEL_ID is None
-    ):
+    if settings.DISCORD_GUILD_ID is None or settings.NEW_LASER_VIOLATION_CHANNEL_ID is None:
         return
 
     violation_report = await ViolationReport.objects.select_related("submission").aget(
@@ -30,7 +27,7 @@ async def _submit_violation_report_discord(violation_id):
     embed = build_embed(violation_report)
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEW_LASER_VIOLATION_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     notification_channel = await guild.fetch_channel(settings.NEW_LASER_VIOLATION_CHANNEL_ID)
 
     components = [

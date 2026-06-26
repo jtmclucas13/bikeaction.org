@@ -27,9 +27,7 @@ class SetupDiscordCommandTest(TestCase):
                 output = stdout.getvalue()
 
                 self.assertIn("Missing required environment variables", output)
-                self.assertIn("NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID", output)
-                self.assertIn("NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID", output)
-                self.assertIn("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID", output)
+                self.assertIn("DISCORD_GUILD_ID", output)
 
     @patch("requests.get")
     def test_user_aborts_setup(self, mock_get):
@@ -40,17 +38,13 @@ class SetupDiscordCommandTest(TestCase):
         def mocked_getenv(key):
             env_vars = {
                 "DISCORD_BOT_TOKEN": "some_bot_token",
-                "NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID": "123",
-                "NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID": "456",
-                "NEW_PROJECT_REVIEW_DISCORD_GUILD_ID": "789",
+                "DISCORD_GUILD_ID": "456",
             }
             return env_vars.get(key)
 
-        # The first 3 calls are get_guild_name, the rest are get_guild_channels and get_guild_roles
+        # The first call is get_guild_name, the rest are get_guild_channels and get_guild_roles
         mock_get.return_value.json.side_effect = [
-            {"name": "Test Guild"},  # organizer_review_guild_name
-            {"name": "Test Guild"},  # neighborhood_selection_guild_name
-            {"name": "Test Guild"},  # new_project_review_guild_name
+            {"name": "Test Guild"},  # guild_name
             [],  # existing_channels (Projects category)
             [],  # existing_channels (Project Review)
             [],  # existing_channels (Project Voting)
@@ -80,17 +74,13 @@ class SetupDiscordCommandTest(TestCase):
         def mocked_getenv(key):
             env_vars = {
                 "DISCORD_BOT_TOKEN": "some_bot_token",
-                "NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID": "123",
-                "NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID": "456",
-                "NEW_PROJECT_REVIEW_DISCORD_GUILD_ID": "789",
+                "DISCORD_GUILD_ID": "456",
             }
             return env_vars.get(key)
 
         mock_channel_id = "new_channel_id"
         mock_get.return_value.json.side_effect = [
-            {"name": "Test Guild"},  # organizer_review_guild_name
-            {"name": "Test Guild"},  # neighborhood_selection_guild_name
-            {"name": "Test Guild"},  # new_project_review_guild_name
+            {"name": "Test Guild"},  # guild_name
             [],  # existing_channels (Projects category)
             [],  # existing_channels (Project Review)
             [],  # existing_channels (Project Voting)
