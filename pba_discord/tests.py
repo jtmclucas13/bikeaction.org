@@ -1,9 +1,10 @@
 import io
 from unittest.mock import patch
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 
+@override_settings(DEBUG=True)
 class SetupDiscordCommandTest(TestCase):
     def test_missing_env_vars_prints_error(self):
         """
@@ -45,7 +46,18 @@ class SetupDiscordCommandTest(TestCase):
             }
             return env_vars.get(key)
 
-        mock_get.return_value.json.return_value = {"name": "Test Guild"}
+        # The first 3 calls are get_guild_name, the rest are get_guild_channels and get_guild_roles
+        mock_get.return_value.json.side_effect = [
+            {"name": "Test Guild"},  # organizer_review_guild_name
+            {"name": "Test Guild"},  # neighborhood_selection_guild_name
+            {"name": "Test Guild"},  # new_project_review_guild_name
+            [],                      # existing_channels (Projects category)
+            [],                      # existing_channels (Project Review)
+            [],                      # existing_channels (Project Voting)
+            [],                      # existing_channels (Project Log)
+            [],                      # existing_roles (Organizer)
+            [],                      # existing_roles (Project Lead)
+        ]
         mock_get.return_value.raise_for_status.return_value = None
 
         with patch("os.getenv", side_effect=mocked_getenv):
@@ -75,7 +87,17 @@ class SetupDiscordCommandTest(TestCase):
             return env_vars.get(key)
 
         mock_channel_id = "new_channel_id"
-        mock_get.return_value.json.return_value = {"name": "Test Guild"}
+        mock_get.return_value.json.side_effect = [
+            {"name": "Test Guild"},  # organizer_review_guild_name
+            {"name": "Test Guild"},  # neighborhood_selection_guild_name
+            {"name": "Test Guild"},  # new_project_review_guild_name
+            [],                      # existing_channels (Projects category)
+            [],                      # existing_channels (Project Review)
+            [],                      # existing_channels (Project Voting)
+            [],                      # existing_channels (Project Log)
+            [],                      # existing_roles (Organizer)
+            [],                      # existing_roles (Project Lead)
+        ]
         mock_get.return_value.raise_for_status.return_value = None
         mock_post.return_value.json.return_value = {"id": mock_channel_id}
         mock_post.return_value.raise_for_status.return_value = None
