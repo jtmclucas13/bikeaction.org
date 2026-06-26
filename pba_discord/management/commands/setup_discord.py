@@ -16,6 +16,30 @@ def get_guild_name(guild_id: str, auth_token: str) -> str | None:
     except requests.exceptions.RequestException as e:
         print(f"Error fetching guild name: {e}")
         return None
+    
+def get_guild_channels(guild_id: str, auth_token: str) -> str | None:
+    """
+    Fetches all the channels in a Discord guild.
+    """
+    try:
+        response = requests.get(f"{DISCORD_API_BASE_URL}/guilds/{guild_id}/channels", headers={"Authorization": f"Bot {auth_token}"})
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching guild channels: {e}")
+        return None
+    
+def get_guild_roles(guild_id: str, auth_token: str) -> str | None:
+    """
+    Fetches all the roles in a Discord guild.
+    """
+    try:
+        response = requests.get(f"{DISCORD_API_BASE_URL}/guilds/{guild_id}/roles", headers={"Authorization": f"Bot {auth_token}"})
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching guild roles: {e}")
+        return None
 
 def create_guild_channel(guild_id: str, channel_name: str, auth_token: str, is_category: bool = False, category_id: str | None = None) -> str | None:
     """
@@ -24,6 +48,12 @@ def create_guild_channel(guild_id: str, channel_name: str, auth_token: str, is_c
     channel_type = 4 if is_category else 0
 
     try:
+        existing_channels = get_guild_channels(guild_id, auth_token)
+        if existing_channels:
+            existing_channel_names = {channel["name"] for channel in existing_channels}
+            if channel_name in existing_channel_names:
+                raise ValueError(f"Channel '{channel_name}' already exists.")
+
         response = requests.post(
             f"{DISCORD_API_BASE_URL}/guilds/{guild_id}/channels",
             headers={"Authorization": f"Bot {auth_token}", "Content-Type": "application/json"},
@@ -40,6 +70,12 @@ def create_guild_role(guild_id: str, role_name: str, auth_token: str) -> str | N
     Creates a role in a Discord guild.
     """
     try:
+        existing_roles = get_guild_roles(guild_id, auth_token)
+        if existing_roles:
+            existing_role_names = {role["name"] for role in existing_roles}
+            if role_name in existing_role_names:
+                raise ValueError(f"Role '{role_name}' already exists.")
+
         response = requests.post(
             f"{DISCORD_API_BASE_URL}/guilds/{guild_id}/roles",
             headers={"Authorization": f"Bot {auth_token}", "Content-Type": "application/json"},
