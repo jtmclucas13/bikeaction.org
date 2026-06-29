@@ -229,10 +229,6 @@ class ContentButtonBlock(StructBlock):
 
     text = CharBlock()
     url = LinkBlock()
-    width = ChoiceBlock(
-        choices=[("full", "Full"), ("half", "Half")],
-        default="full",
-    )
     icon = CharBlock(
         required=False,
         help_text=(
