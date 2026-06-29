@@ -1,5 +1,6 @@
 <div class="cms-button-corral" style="{% if value.alignment == 'center' %}text-align: center;{% endif %}">
   <a href="{{ value.url.get_url }}"
     class="submit-button"
+    style="overflow-wrap: break-word; white-space: normal;"
   >{{ value.text }}{% if value.icon %} <i class="{{ value.icon }}"></i>{% endif %}</a>
 </div>
