@@ -129,6 +129,7 @@ INSTALLED_APPS = [
     "lazer",
     "cms",
     "elections",
+    "pba_discord",
 ]
 
 TESTING = "test" in sys.argv
