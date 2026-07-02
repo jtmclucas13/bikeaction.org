@@ -1,6 +1,8 @@
 import csv
 import datetime
+import json
 from collections import defaultdict
+from django.shortcuts import render
 from io import BytesIO
 
 from admin_extra_buttons.api import ExtraButtonsMixin, button
@@ -18,6 +20,7 @@ from email_log.models import Email
 from reportlab.lib.units import inch as rl_inch
 from reportlab.pdfgen import canvas
 
+from campaigns.admin import randomize_lat_long
 from facets.models import District, RegisteredCommunityOrganization
 from membership.models import Membership
 from pbaabp.admin import OrganizerPerms, ReadOnlyLeafletGeoAdminMixin, organizer_admin
@@ -316,6 +319,15 @@ class OrganizesDistrictInline(admin.TabularInline):
     extra = 0
 
 
+def heatmap(modeladmin, request, queryset):
+    pins = []
+    for profile in queryset:
+        if profile.location:
+            lat, lng = randomize_lat_long(profile.id, profile.location.y, profile.location.x)
+            pins.append([lat, lng, 1])
+    return render(request, "petition/heatmap.html", {"pins_json": json.dumps(pins)})
+
+
 class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelAdmin):
     list_display = [
         "_name",
@@ -352,7 +364,7 @@ class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelA
     ]
     inlines = [OrganizesDistrictInline]
     autocomplete_fields = ("user",)
-    actions = ["resync_apps_connected"]
+    actions = [heatmap, "resync_apps_connected"]
 
     def _enqueue_connected_role_sync(self, profile):
         discord = profile.discord
