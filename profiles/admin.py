@@ -323,9 +323,7 @@ def heatmap(modeladmin, request, queryset):
     pins = []
     for profile in queryset:
         if profile.location:
-            lat, lng = randomize_lat_long(
-                profile.id, profile.location.y, profile.location.x
-            )
+            lat, lng = randomize_lat_long(profile.id, profile.location.y, profile.location.x)
             pins.append([lat, lng, 1])
     return render(request, "petition/heatmap.html", {"pins_json": json.dumps(pins)})
 
