@@ -222,6 +222,7 @@ class CollapsibleHeader(StructBlock):
     class Meta:
         template = "blocks/collapsible_header.html"
 
+
 class ContentButtonBlock(StructBlock):
     """
     A button with text, a color, width, optional centering, and optional icon
@@ -242,6 +243,7 @@ class ContentButtonBlock(StructBlock):
         required=False,
         choices=[("center", "Center")],
     )
+
     class Meta:
         template = "blocks/button_block.html"
 
@@ -314,7 +316,7 @@ class PostPage(Page):
             ("html", RawHTMLBlock()),
             ("table", TableBlock(table_options=table_options)),
             ("newsletter_signup", NewsletterSignupBlock()),
-            ("content_button_block", ContentButtonBlock())
+            ("content_button_block", ContentButtonBlock()),
         ],
         use_json_field=True,
     )
