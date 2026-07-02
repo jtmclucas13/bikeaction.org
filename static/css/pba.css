@@ -1411,6 +1411,9 @@ body {
   margin-left: .25em;
   margin-right: .25em;
 }
+.cms-button-corral {
+  width: 100%;
+}
 
 .homepage-action-subscribe {
   text-align: center;

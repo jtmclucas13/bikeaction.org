@@ -223,6 +223,31 @@ class CollapsibleHeader(StructBlock):
         template = "blocks/collapsible_header.html"
 
 
+class ContentButtonBlock(StructBlock):
+    """
+    A button with text, a color, width, optional centering, and optional icon
+    """
+
+    text = CharBlock()
+    url = LinkBlock()
+    icon = CharBlock(
+        required=False,
+        help_text=(
+            "A FontAwesome icon name, see "
+            '<a href="https://fontawesome.com/search?ic=free">here</a> '
+            "for list of options"
+        ),
+    )
+
+    alignment = ChoiceBlock(
+        required=False,
+        choices=[("center", "Center")],
+    )
+
+    class Meta:
+        template = "blocks/button_block.html"
+
+
 class CmsStreamPage(Page):
     show_title = models.BooleanField(default=True)
 
@@ -235,6 +260,7 @@ class CmsStreamPage(Page):
             ("newsletter_signup", NewsletterSignupBlock()),
             ("display_card_block", DisplayCardsBlock()),
             ("collapsible_header", CollapsibleHeader()),
+            ("content_button_block", ContentButtonBlock()),
         ],
         use_json_field=True,
     )
@@ -290,6 +316,7 @@ class PostPage(Page):
             ("html", RawHTMLBlock()),
             ("table", TableBlock(table_options=table_options)),
             ("newsletter_signup", NewsletterSignupBlock()),
+            ("content_button_block", ContentButtonBlock()),
         ],
         use_json_field=True,
     )
