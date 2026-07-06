@@ -6,11 +6,12 @@ from django.shortcuts import render
 from io import BytesIO
 
 from admin_extra_buttons.api import ExtraButtonsMixin, button
+from allauth.socialaccount.models import SocialAccount
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models import Count, Exists, IntegerField, OuterRef, Prefetch, Q, Subquery, Value
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
@@ -26,6 +27,53 @@ from membership.models import Membership
 from pbaabp.admin import OrganizerPerms, ReadOnlyLeafletGeoAdminMixin, organizer_admin
 from profiles.models import DiscordActivity, DoNotEmail, Profile, ShirtOrder
 from profiles.tasks import add_user_to_connected_role
+
+
+def active_subscription_exists():
+    return Exists(
+        Subscription.objects.filter(customer__subscriber=OuterRef("user"), status__in=["active"])
+    )
+
+
+def discord_account_exists():
+    return Exists(SocialAccount.objects.filter(user=OuterRef("user"), provider="discord"))
+
+
+def recent_discord_activity_exists():
+    thirty_days_ago = timezone.now().date() - datetime.timedelta(days=30)
+    return Exists(DiscordActivity.objects.filter(profile=OuterRef("pk"), date__gte=thirty_days_ago))
+
+
+def active_membership_exists():
+    today = timezone.now().date()
+    return Exists(
+        Membership.objects.filter(user=OuterRef("user"), start_date__lte=today).filter(
+            Q(end_date__isnull=True) | Q(end_date__gte=today)
+        )
+    )
+
+
+def member_expression():
+    return (
+        active_subscription_exists()
+        | (discord_account_exists() & recent_discord_activity_exists())
+        | active_membership_exists()
+    )
+
+
+class BooleanFacetCountMixin:
+    def get_facet_queryset(self, changelist):
+        filtered_qs = changelist.get_queryset(
+            self.request, exclude_parameters=self.expected_parameters()
+        )
+        predicate = self.get_filter_expression()
+        return {
+            "0__c": filtered_qs.filter(predicate).count(),
+            "1__c": filtered_qs.filter(~predicate).count(),
+        }
+
+    def get_filter_expression(self):
+        raise NotImplementedError
 
 
 class DistrictOrganizerFilter(admin.SimpleListFilter):
@@ -155,137 +203,156 @@ class AppsConnectedFilter(admin.SimpleListFilter):
         return queryset
 
 
-class MemberFilter(admin.SimpleListFilter):
+class MemberFilter(BooleanFacetCountMixin, admin.SimpleListFilter):
     title = "PBA Member"
     parameter_name = "member"
 
     def lookups(self, request, model_admin):
         return ((True, "Yes"), (False, "No"))
 
+    def get_filter_expression(self):
+        return member_expression()
+
     def queryset(self, request, queryset):
-        # Use pre-computed annotations from get_queryset for better performance
         if self.value() in (
             "True",
             True,
         ):
-            return queryset.filter(
-                Q(has_discord_activity=True)
-                | Q(has_active_subscription=True)
-                | Q(has_special_membership=True)
-            )
+            return queryset.filter(self.get_filter_expression())
         elif self.value() in (
             "False",
             False,
         ):
-            return queryset.filter(
-                has_discord_activity=False,
-                has_active_subscription=False,
-                has_special_membership=False,
-            )
+            return queryset.filter(~self.get_filter_expression())
         return queryset
 
 
-class MemberByDonationFilter(admin.SimpleListFilter):
+class MemberByDonationFilter(BooleanFacetCountMixin, admin.SimpleListFilter):
     title = "PBA Member (donation)"
     parameter_name = "member_donation"
 
     def lookups(self, request, model_admin):
         return ((True, "Yes"), (False, "No"))
 
+    def get_filter_expression(self):
+        return active_subscription_exists()
+
     def queryset(self, request, queryset):
-        # Use pre-computed annotation for better performance
         if self.value() in (
             "True",
             True,
         ):
-            return queryset.filter(has_active_subscription=True)
+            return queryset.filter(self.get_filter_expression())
         elif self.value() in (
             "False",
             False,
         ):
-            return queryset.filter(has_active_subscription=False)
+            return queryset.filter(~self.get_filter_expression())
         return queryset
 
 
-class MemberByDiscordActivityFilter(admin.SimpleListFilter):
+class MemberByDiscordActivityFilter(BooleanFacetCountMixin, admin.SimpleListFilter):
     title = "PBA Member (discord)"
     parameter_name = "member_discord"
 
     def lookups(self, request, model_admin):
         return ((True, "Yes"), (False, "No"))
 
+    def get_filter_expression(self):
+        return discord_account_exists() & recent_discord_activity_exists()
+
     def queryset(self, request, queryset):
-        # Use pre-computed annotation for better performance
         if self.value() in (
             "True",
             True,
         ):
-            return queryset.filter(has_discord_activity=True)
+            return queryset.filter(self.get_filter_expression())
         elif self.value() in (
             "False",
             False,
         ):
-            return queryset.filter(has_discord_activity=False)
+            return queryset.filter(~self.get_filter_expression())
         return queryset
 
 
-class MemberBySpecialRecognitionFilter(admin.SimpleListFilter):
+class MemberBySpecialRecognitionFilter(BooleanFacetCountMixin, admin.SimpleListFilter):
     title = "PBA Member (special recognition)"
     parameter_name = "member_special"
 
     def lookups(self, request, model_admin):
         return ((True, "Yes"), (False, "No"))
 
+    def get_filter_expression(self):
+        return active_membership_exists()
+
     def queryset(self, request, queryset):
-        # Use pre-computed annotation for better performance
         if self.value() in (
             "True",
             True,
         ):
-            return queryset.filter(has_special_membership=True)
+            return queryset.filter(self.get_filter_expression())
         elif self.value() in (
             "False",
             False,
         ):
-            return queryset.filter(has_special_membership=False)
+            return queryset.filter(~self.get_filter_expression())
         return queryset
 
 
-class DistrictFilter(admin.SimpleListFilter):
-    title = "Council District (verified)"
-    parameter_name = "council_district_verified"
+class GeoFacetFilter(admin.SimpleListFilter):
+    model = None
+    request_cache_name = None
+
+    def get_filter_objects(self, request):
+        if not hasattr(request, self.request_cache_name):
+            setattr(
+                request,
+                self.request_cache_name,
+                list(self.model.objects.filter(targetable=True)),
+            )
+        return getattr(request, self.request_cache_name)
 
     def lookups(self, request, model_admin):
-        return [(f.id, f.name) for f in District.objects.all() if f.targetable]
+        return [(obj.id, obj.name) for obj in self.get_filter_objects(request)]
+
+    def get_selected_object(self, request):
+        value = self.value()
+        if not value:
+            return None
+        return next((obj for obj in self.get_filter_objects(request) if str(obj.id) == value), None)
 
     def queryset(self, request, queryset):
-        if self.value():
-            d = District.objects.get(id=self.value())
-            return queryset.filter(location__within=d.mpoly)
+        if selected := self.get_selected_object(request):
+            return queryset.filter(location__within=selected.mpoly)
         return queryset
+
+    def get_facet_counts(self, pk_attname, filtered_qs):
+        return {
+            f"{i}__c": Count(pk_attname, filter=Q(location__within=obj.mpoly))
+            for i, obj in enumerate(self.get_filter_objects(self.request))
+        }
+
+
+class DistrictFilter(GeoFacetFilter):
+    title = "Council District (verified)"
+    parameter_name = "council_district_verified"
+    model = District
+    request_cache_name = "_profile_admin_targetable_districts"
 
 
 class OrganizerDistrictFilter(DistrictFilter):
     def lookups(self, request, model_amin):
-        return [
-            (f.id, f.name) for f in request.user.profile.organized_districts.all() if f.targetable
-        ]
+        return [(f.id, f.name) for f in self.get_filter_objects(request)]
+
+    def get_filter_objects(self, request):
+        return [f for f in request.user.profile.organized_districts.all() if f.targetable]
 
 
-class RCOFilter(admin.SimpleListFilter):
+class RCOFilter(GeoFacetFilter):
     title = "RCOs (verified)"
     parameter_name = "rcos_verified"
-
-    def lookups(self, request, model_admin):
-        return [
-            (f.id, f.name) for f in RegisteredCommunityOrganization.objects.all() if f.targetable
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            r = RegisteredCommunityOrganization.objects.get(id=self.value())
-            return queryset.filter(location__within=r.mpoly)
-        return queryset
+    model = RegisteredCommunityOrganization
+    request_cache_name = "_profile_admin_targetable_rcos"
 
 
 class EmailHistory:
@@ -304,12 +371,19 @@ class EmailHistory:
 
 class OrganizerRCOFilter(RCOFilter):
     def lookups(self, request, model_amin):
-        return [
-            (f.id, f.name)
-            for district in request.user.profile.organized_districts.all()
-            for f in district.intersecting_rcos.all()
-            if f.targetable
-        ]
+        return [(f.id, f.name) for f in self.get_filter_objects(request)]
+
+    def get_filter_objects(self, request):
+        if hasattr(request, "_profile_admin_organizer_rcos"):
+            return request._profile_admin_organizer_rcos
+
+        rcos_by_id = {}
+        for district in request.user.profile.organized_districts.all():
+            for rco in district.intersecting_rcos.all():
+                if rco.targetable:
+                    rcos_by_id[rco.id] = rco
+        request._profile_admin_organizer_rcos = list(rcos_by_id.values())
+        return request._profile_admin_organizer_rcos
 
 
 class OrganizesDistrictInline(admin.TabularInline):
@@ -418,6 +492,17 @@ class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelA
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         queryset = queryset.select_related("user")
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                "user__socialaccount_set",
+                queryset=SocialAccount.objects.filter(provider="discord"),
+                to_attr="prefetched_discord_accounts",
+            ),
+            Prefetch(
+                "organized_districts",
+                queryset=District.objects.only("id", "name", "targetable"),
+            ),
+        )
 
         # Use a subquery to count emails efficiently
         thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
@@ -435,36 +520,10 @@ class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelA
 
         # Annotate with email count, defaulting to 0
         queryset = queryset.annotate(email_count_30d=Coalesce(email_count_subquery, Value(0)))
-
-        # Pre-compute membership status flags to avoid expensive joins in filters
-        now = timezone.now().date()
-
-        # Check for active Stripe subscriptions
-        has_active_subscription = Exists(
-            Subscription.objects.filter(
-                customer__subscriber=OuterRef("user"), status__in=["active"]
-            )
-        )
-
-        # Check for Discord activity in last 30 days
-        # Need both Discord connection AND recent activity
-        has_discord_activity = Exists(
-            DiscordActivity.objects.filter(
-                profile=OuterRef("pk"), date__gte=(now - datetime.timedelta(days=30))
-            ).filter(profile__user__socialaccount__provider="discord")
-        )
-
-        # Check for special recognition membership
-        has_special_membership = Exists(
-            Membership.objects.filter(user=OuterRef("user"), start_date__lte=now).filter(
-                Q(end_date__isnull=True) | Q(end_date__gte=now)
-            )
-        )
-
         queryset = queryset.annotate(
-            has_active_subscription=has_active_subscription,
-            has_discord_activity=has_discord_activity,
-            has_special_membership=has_special_membership,
+            council_district_name=Subquery(
+                District.objects.filter(mpoly__contains=OuterRef("location")).values("name")[:1]
+            )
         )
 
         return queryset
@@ -572,6 +631,8 @@ class ProfileAdmin(ExtraButtonsMixin, ReadOnlyLeafletGeoAdminMixin, admin.ModelA
     def council_district_display(self, obj=None):
         if obj is None:
             return None
+        if hasattr(obj, "council_district_name"):
+            return obj.council_district_name
         return obj.district
 
     council_district_display.short_description = "District"

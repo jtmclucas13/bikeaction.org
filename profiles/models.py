@@ -375,6 +375,9 @@ class Profile(models.Model):
 
     @property
     def discord(self):
+        prefetched_discord_accounts = getattr(self.user, "prefetched_discord_accounts", None)
+        if prefetched_discord_accounts is not None:
+            return prefetched_discord_accounts[0] if prefetched_discord_accounts else None
         return self.user.socialaccount_set.filter(provider="discord").first()
 
     @property
