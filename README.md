@@ -1,6 +1,6 @@
-# apps.bikeaction.org
+# bikeaction.org
 
-This Django codebase is what powers [apps.bikeaction.org](https://apps.bikeaction.org)
+This Django codebase is what powers [bikeaction.org](https://bikeaction.org)
 
 Aside from the Django web site, it also hosts our [discord bot](/pba_discord/bot.py)
 which is built with [interactions.py](https://interactions-py.github.io/interactions.py/).
@@ -25,7 +25,7 @@ and orchestrated with [make](https://www.gnu.org/software/make/).
 Clone you fork of the repo:
 
 ```shell
-git clone https://github.com/<your github username>/apps.git
+git clone https://github.com/<your github username>/bikeaction.org.git
 ```
 
 ### Windows Specific Instruction
@@ -101,7 +101,7 @@ See [pba_discord/README.md](pba_discord/README.md) for further instructions on h
 
 ## Deployment
 
-Deployments to [apps.bikeaction.org](https://apps.bikeaction.org) occur on merge to `main` branch.
+Deployments to [bikeaction.org](https://bikeaction.org) occur on merge to `main` branch.
 
 You can watch the progress of the deploy to our [dokku](https://dokku.com) instance
 in the GitHub Actions output.
