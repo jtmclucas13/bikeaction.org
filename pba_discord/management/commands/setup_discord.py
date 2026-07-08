@@ -123,9 +123,7 @@ class Command(BaseCommand):
         # Verify environment variables
         required_vars = [
             "DISCORD_BOT_TOKEN",
-            "NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID",
-            "NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID",
-            "NEW_PROJECT_REVIEW_DISCORD_GUILD_ID",
+            "DISCORD_GUILD_ID",
         ]
         missing_vars = [var for var in required_vars if not os.getenv(var)]
 
@@ -142,31 +140,13 @@ class Command(BaseCommand):
 
         auth_token = os.getenv("DISCORD_BOT_TOKEN")
 
-        # Fetch names for guilds that will be modified
-        organizer_review_guild_name = get_guild_name(
-            os.getenv("NEW_ORGANIZER_REVIEW_DISCORD_GUILD_ID"), auth_token
-        )
-        neighborhood_selection_guild_name = get_guild_name(
-            os.getenv("NEIGHBORHOOD_SELECTION_DISCORD_GUILD_ID"), auth_token
-        )
-        new_project_review_guild_name = get_guild_name(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"), auth_token
-        )
+        # Fetch names for guild that will be modified
+        discord_guild_name = get_guild_name(os.getenv("DISCORD_GUILD_ID"), auth_token)
 
-        self.stdout.write(f"Organizer Review Guild: {organizer_review_guild_name}")
-        self.stdout.write(f"Neighborhood Selection Guild: {neighborhood_selection_guild_name}")
-        self.stdout.write(f"New Project Review Guild: {new_project_review_guild_name}")
+        self.stdout.write(f"Discord Guild: {discord_guild_name}")
 
-        if not all(
-            [
-                organizer_review_guild_name,
-                neighborhood_selection_guild_name,
-                new_project_review_guild_name,
-            ]
-        ):
-            self.stdout.write(
-                self.style.ERROR("Failed to fetch all guild names, guilds may not exist.")
-            )
+        if not discord_guild_name:
+            self.stdout.write(self.style.ERROR("Failed to fetch guild name, guild may not exist."))
             return
 
         response = input(
@@ -181,25 +161,25 @@ class Command(BaseCommand):
 
         # create Projects category and necessary channels
         projects_category_id = create_guild_channel(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"),
+            os.getenv("DISCORD_GUILD_ID"),
             "Projects",
             auth_token,
             is_category=True,
         )
         project_review_channel_id = create_guild_channel(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"),
+            os.getenv("DISCORD_GUILD_ID"),
             "Project Review",
             auth_token,
             category_id=projects_category_id,
         )
         project_vote_channel_id = create_guild_channel(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"),
+            os.getenv("DISCORD_GUILD_ID"),
             "Project Voting",
             auth_token,
             category_id=projects_category_id,
         )
         project_log_channel_id = create_guild_channel(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"),
+            os.getenv("DISCORD_GUILD_ID"),
             "Project Log",
             auth_token,
             category_id=projects_category_id,
@@ -207,10 +187,10 @@ class Command(BaseCommand):
 
         # create Project-related roles
         organizer_role_id = create_guild_role(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"), "Organizer", auth_token
+            os.getenv("DISCORD_GUILD_ID"), "Organizer", auth_token
         )
         project_lead_role_id = create_guild_role(
-            os.getenv("NEW_PROJECT_REVIEW_DISCORD_GUILD_ID"), "Project Lead", auth_token
+            os.getenv("DISCORD_GUILD_ID"), "Project Lead", auth_token
         )
 
         self.stdout.write(

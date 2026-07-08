@@ -90,7 +90,7 @@ async def _add_new_project_message_and_thread(project_application_id):
         return
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEW_PROJECT_REVIEW_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     channel = await guild.fetch_channel(settings.NEW_PROJECT_REVIEW_DISCORD_CHANNEL_ID)
     mention_role = await guild.fetch_role(settings.NEW_PROJECT_REVIEW_DISCORD_ROLE_MENTION_ID)
     submitter = await sync_to_async(lambda: application.submitter)()
@@ -138,7 +138,7 @@ async def _add_new_project_voting_message_and_thread(project_application_id):
         return
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEW_PROJECT_REVIEW_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     discussion_thread = await guild.fetch_channel(application.thread_id)
     channel = await guild.fetch_channel(settings.NEW_PROJECT_REVIEW_DISCORD_VOTE_CHANNEL_ID)
     mention_role = await guild.fetch_role(settings.NEW_PROJECT_REVIEW_DISCORD_ROLE_VOTE_MENTION_ID)
@@ -179,7 +179,7 @@ async def _approve_new_project(
     application = await ProjectApplication.objects.filter(id=project_application_id).afirst()
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEW_PROJECT_REVIEW_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
     discussion_thread = await guild.fetch_channel(application.thread_id)
     voting_thread = await guild.fetch_channel(application.voting_thread_id)
     messages = await voting_thread.history(limit=0).flatten()
@@ -280,7 +280,7 @@ async def _archive_project(project_application_id):
     application = await ProjectApplication.objects.filter(id=project_application_id).afirst()
 
     await bot.login(settings.DISCORD_BOT_TOKEN)
-    guild = await bot.fetch_guild(settings.NEW_PROJECT_REVIEW_DISCORD_GUILD_ID)
+    guild = await bot.fetch_guild(settings.DISCORD_GUILD_ID)
 
     channel = None
     if application.channel_id:
